@@ -27,51 +27,74 @@ impl CPU {
                     return;
                 }
 
-                // todo: extract method
                 0xA9 => {
                     self.register_a = program[self.program_counter as usize];
                     self.program_counter += 1;
 
-                    if self.register_a == 0 {
-                        self.status = self.status | 0b0000_0010;
-                    } else {
-                        self.status = self.status & 0b1111_1101;
-                    }
-
-                    if self.register_a & 0b1000_0000 != 0 {
-                        self.status = self.status | 0b1000_0000;
-                    } else {
-                        self.status = self.status & 0b0111_1111;
-                    }
+                    self.status = CPU::update_zero_flag(self.status, self.register_a);
+                    self.status = self.update_negative_flag(self.status, self.register_a);                    
                 }
 
                 0xAA => {
                     self.register_x = self.register_a;
 
-                    if self.register_x == 0 {
-                        self.status = self.status | 0b0000_0010;
-                    } else {
-                        self.status = self.status & 0b1111_1101;
-                    }
-
-                    if self.register_a & 0b1000_0000 != 0 {
-                        self.status = self.status | 0b1000_0000;
-                    } else {
-                        self.status = self.status & 0b0111_1111;
-                    }
+                    self.status = CPU::update_zero_flag(self.status, self.register_x);
+                    self.status = self.update_negative_flag(self.status, self.register_x);
                 }
+                
                 _ => {
                     todo!();
                 }
             }
         }
     }
+
+    fn update_zero_flag(status_register: u8, register: u8)-> u8 {
+        if register == 0 {
+            return status_register | 0b0000_0010;
+        } else {
+            return status_register & 0b1111_1101;
+        }
+    }
+
+    fn update_negative_flag(&self, status_register: u8, register: u8)-> u8 {
+        if register & 0b1000_0000 != 0 {
+            return status_register | 0b1000_0000;
+        } else {
+            return status_register & 0b0111_1111;
+        }
+    }
+
 }
 
 #[cfg(test)]
 mod test_cpu {
     use super::*;
-    // todo: add setup, teardown
+
+    fn update_zero_flag_test_case(status_register: u8, register: u8, expected: u8)-> Result<(), String> {
+        let result = CPU::update_zero_flag(status_register, register);
+        if  result != expected {
+            Err(format!(
+                "Input ({}, {}) was expected to return {}, but returned {}", status_register, register, expected, result
+            ))
+        } else {
+            Ok(())
+        }
+    }
+
+
+    #[test]
+    fn run_update_zero_flag_tests() -> Result<(), String> {
+        let examples = [
+            (0b0, 0b0, 0b0000_0010),
+            (0b0000_0010, 0b10, 0b0),
+        ]
+        .into_iter()        
+        .try_for_each(| (status_register, register, expected)| update_zero_flag_test_case(status_register, register, expected))?;
+        Ok(())
+    }
+
+
     #[test]
     fn lda_correctly_sets_negative_flag() {
         let program = vec![0xa9, 0x05, 0x00];
@@ -80,14 +103,6 @@ mod test_cpu {
         assert!(cpu.status & 0b0000_0010 == 0b00);
         assert!(cpu.status & 0b1000_0000 == 0);
         // todo: add test case where the negative flag is 1
-    }
-
-    #[test]
-    fn lda_correctly_sets_zero_flag() {
-        let program = vec![0xa9, 0x00, 0x00];
-        let mut cpu = CPU::new();
-        cpu.interpret(program);
-        assert!(cpu.status & 0b0000_0010 == 0b10);
     }
 
     // todo: add test to check lda loads to register_a
