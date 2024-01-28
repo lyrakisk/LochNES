@@ -28,18 +28,11 @@ impl CPU {
                 }
 
                 0xA9 => {
-                    self.register_a = program[self.program_counter as usize];
-                    self.program_counter += 1;
-
-                    self.status = CPU::update_zero_flag(self.status, self.register_a);
-                    self.status = self.update_negative_flag(self.status, self.register_a);                    
+                    self.lda(program[self.program_counter as usize]);
                 }
 
                 0xAA => {
-                    self.register_x = self.register_a;
-
-                    self.status = CPU::update_zero_flag(self.status, self.register_x);
-                    self.status = self.update_negative_flag(self.status, self.register_x);
+                    self.tax();
                 }
                 
                 _ => {
@@ -49,6 +42,26 @@ impl CPU {
         }
     }
 
+
+    fn lda(&mut self, value: u8) {
+        self.register_a = value; 
+
+        // consider moving this to interpret() so that only one method can manipulate the program counter
+        self.program_counter += 1;
+
+        self.status = CPU::update_zero_flag(self.status, self.register_a);
+        self.status = self.update_negative_flag(self.status, self.register_a);                    
+    }
+
+
+    fn tax(&mut self) {
+        self.register_x = self.register_a;
+
+        self.status = CPU::update_zero_flag(self.status, self.register_x);
+        self.status = self.update_negative_flag(self.status, self.register_x);
+    }
+
+
     fn update_zero_flag(status_register: u8, register: u8)-> u8 {
         if register == 0 {
             return status_register | 0b0000_0010;
@@ -56,6 +69,7 @@ impl CPU {
             return status_register & 0b1111_1101;
         }
     }
+
 
     fn update_negative_flag(&self, status_register: u8, register: u8)-> u8 {
         if register & 0b1000_0000 != 0 {
@@ -85,7 +99,7 @@ mod test_cpu {
 
     #[test]
     fn run_update_zero_flag_tests() -> Result<(), String> {
-        let examples = [
+        let _examples = [
             (0b0, 0b0, 0b0000_0010),
             (0b0000_0010, 0b10, 0b0),
         ]
