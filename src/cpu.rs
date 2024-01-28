@@ -35,6 +35,9 @@ impl CPU {
                     self.tax();
                 }
                 
+                0xE8 => {
+                    self.inx();
+                }
                 _ => {
                     todo!();
                 }
@@ -59,6 +62,12 @@ impl CPU {
 
         self.status = CPU::update_zero_flag(self.status, self.register_x);
         self.status = self.update_negative_flag(self.status, self.register_x);
+    }
+
+    fn inx(&mut self) {
+        self.register_x = self.register_x.wrapping_add(1);
+        self.status = CPU::update_zero_flag(self.status, self.register_a);
+        self.status = self.update_negative_flag(self.status, self.register_a);                    
     }
 
 
@@ -148,4 +157,32 @@ mod test_cpu {
         assert!(cpu.status & 0b1000_0000 == 0);
         // todo: add test case where the negative flag is 1
     }
+
+    #[test]
+    fn inx_increments_the_x_register() {
+        let mut cpu = CPU::new();
+        cpu.register_x = 0x00;
+        let program= vec![0xe8, 0x00];
+        cpu.interpret(program);
+        assert_eq!(cpu.register_x, 0x01);
+    }
+
+
+   #[test]
+   fn test_5_ops_working_together() {
+       let mut cpu = CPU::new();
+       cpu.interpret(vec![0xa9, 0xc0, 0xaa, 0xe8, 0x00]);
+ 
+       assert_eq!(cpu.register_x, 0xc1)
+   }
+
+   #[test]
+    fn test_inx_overflow() {
+        let mut cpu = CPU::new();
+        cpu.register_x = 0xff;
+        cpu.interpret(vec![0xe8, 0xe8, 0x00]);
+
+        assert_eq!(cpu.register_x, 1)
+    }
+
 }
