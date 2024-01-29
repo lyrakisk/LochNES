@@ -3,6 +3,7 @@ pub struct CPU {
     pub register_x: u8,
     pub status: u8,
     pub program_counter: u16,
+    memory: [u8; 0xFFFF],
 }
 
 impl CPU {
@@ -12,14 +13,19 @@ impl CPU {
             register_x: 0, // todo: check reference, should this be initialized? 
             status: 0, // todo: according to nesdev wiki, the 5th bit is always 1, https://www.nesdev.org/wiki/Status_flags
             program_counter: 0,
+            memory: [0; 0xFFFF], // should everything be initialized to zero? 
         }
     }
 
-    pub fn interpret(&mut self, program: Vec<u8>) {
-        self.program_counter = 0;
 
+    pub fn load_and_run(&mut self, program: Vec<u8>) {
+        self.load(program);
+        self.run();
+    }
+
+    fn run(&mut self) {
         loop {
-            let opscode = program[self.program_counter as usize];
+            let opscode = self.memory[self.program_counter as usize];
             self.program_counter += 1;
 
             match opscode {
@@ -28,7 +34,7 @@ impl CPU {
                 }
 
                 0xA9 => {
-                    self.lda(program[self.program_counter as usize]);
+                    self.lda();
                 }
 
                 0xAA => {
@@ -45,9 +51,23 @@ impl CPU {
         }
     }
 
+    fn load(&mut self, program: Vec<u8>) {
+        self.memory[0x8000 .. (0x8000 + program.len())].copy_from_slice(&program[..]);
+        self.program_counter = 0x8000;
+    }
 
-    fn lda(&mut self, value: u8) {
-        self.register_a = value; 
+    fn mem_read(&self, address: u16)-> u8 {
+        return self.memory[address as usize];
+    }
+
+
+    fn mem_write(&mut self, address: u16, data: u8) {
+        self.memory[address as usize] = data;
+    }
+
+
+    fn lda(&mut self) {
+        self.register_a = self.memory[self.program_counter as usize]; 
 
         // consider moving this to interpret() so that only one method can manipulate the program counter
         self.program_counter += 1;
@@ -122,7 +142,7 @@ mod test_cpu {
     fn lda_correctly_sets_negative_flag() {
         let program = vec![0xa9, 0x05, 0x00];
         let mut cpu = CPU::new();
-        cpu.interpret(program);
+        cpu.load_and_run(program);
         assert!(cpu.status & 0b0000_0010 == 0b00);
         assert!(cpu.status & 0b1000_0000 == 0);
         // todo: add test case where the negative flag is 1
@@ -134,7 +154,7 @@ mod test_cpu {
     fn tax_correctly_updates_register_x() {
         let program = vec![0xa9, 010, 0xAA, 0x00];
         let mut cpu = CPU::new();
-        cpu.interpret(program);
+        cpu.load_and_run(program);
         assert!(cpu.register_a == cpu.register_x);
     }
 
@@ -143,7 +163,7 @@ mod test_cpu {
         let mut cpu = CPU::new();
         cpu.register_a = 0;
         let program = vec![0xAA, 0x00];
-        cpu.interpret(program);
+        cpu.load_and_run(program);
         assert!(cpu.status & 0b0000_0010 == 0b10);
     }
 
@@ -152,7 +172,7 @@ mod test_cpu {
         let mut cpu = CPU::new();
         cpu.register_a = 0x05;
         let program = vec![0xAA, 0x00];
-        cpu.interpret(program);
+        cpu.load_and_run(program);
         assert!(cpu.status & 0b0000_0010 == 0b00);
         assert!(cpu.status & 0b1000_0000 == 0);
         // todo: add test case where the negative flag is 1
@@ -163,7 +183,7 @@ mod test_cpu {
         let mut cpu = CPU::new();
         cpu.register_x = 0x00;
         let program= vec![0xe8, 0x00];
-        cpu.interpret(program);
+        cpu.load_and_run(program);
         assert_eq!(cpu.register_x, 0x01);
     }
 
@@ -171,7 +191,7 @@ mod test_cpu {
    #[test]
    fn test_5_ops_working_together() {
        let mut cpu = CPU::new();
-       cpu.interpret(vec![0xa9, 0xc0, 0xaa, 0xe8, 0x00]);
+       cpu.load_and_run(vec![0xa9, 0xc0, 0xaa, 0xe8, 0x00]);
  
        assert_eq!(cpu.register_x, 0xc1)
    }
@@ -180,7 +200,7 @@ mod test_cpu {
     fn test_inx_overflow() {
         let mut cpu = CPU::new();
         cpu.register_x = 0xff;
-        cpu.interpret(vec![0xe8, 0xe8, 0x00]);
+        cpu.load_and_run(vec![0xe8, 0xe8, 0x00]);
 
         assert_eq!(cpu.register_x, 1)
     }
