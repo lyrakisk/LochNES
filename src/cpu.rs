@@ -173,9 +173,9 @@ mod test_cpu {
 
     #[test]
     fn tax_correctly_updates_register_x() {
-        let program = vec![0xa9, 010, 0xAA, 0x00];
         let mut cpu = CPU::new();
-        cpu.load_and_run(program);
+        cpu.register_a = 0x010;
+        cpu.tax();
         assert!(cpu.register_a == cpu.register_x);
     }
 
@@ -183,8 +183,7 @@ mod test_cpu {
     fn tax_correctly_sets_zero_flag() {
         let mut cpu = CPU::new();
         cpu.register_a = 0;
-        let program = vec![0xAA, 0x00];
-        cpu.load_and_run(program);
+        cpu.tax();
         assert!(cpu.status & 0b0000_0010 == 0b10);
     }
 
@@ -202,8 +201,7 @@ mod test_cpu {
     fn inx_increments_the_x_register() {
         let mut cpu = CPU::new();
         cpu.register_x = 0x00;
-        let program= vec![0xe8, 0x00];
-        cpu.load_and_run(program);
+        cpu.inx();
         assert_eq!(cpu.register_x, 0x01);
     }
 
