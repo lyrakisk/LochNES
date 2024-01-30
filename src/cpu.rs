@@ -12,7 +12,7 @@ impl CPU {
             register_a: 0,
             register_x: 0, // todo: check reference, should this be initialized? 
             status: 0, // todo: according to nesdev wiki, the 5th bit is always 1, https://www.nesdev.org/wiki/Status_flags
-            program_counter: 0,
+            program_counter: 0, // should this start at 0x8000?
             memory: [0; 0xFFFF], // should everything be initialized to zero? 
         }
     }
@@ -20,7 +20,15 @@ impl CPU {
 
     pub fn load_and_run(&mut self, program: Vec<u8>) {
         self.load(program);
+        self.reset();
         self.run();
+    }
+
+    pub fn reset(&mut self) {
+        self.register_a = 0;
+        self.register_x = 0;
+        self.status = 0;
+        self.program_counter = self.mem_read_u16(0xFFFC);
     }
 
     fn run(&mut self) {
@@ -53,7 +61,7 @@ impl CPU {
 
     fn load(&mut self, program: Vec<u8>) {
         self.memory[0x8000 .. (0x8000 + program.len())].copy_from_slice(&program[..]);
-        self.program_counter = 0x8000;
+        self.mem_write_u16(0xFFFC, 0x8000);
     }
 
     fn mem_read(&self, address: u16)-> u8 {
@@ -64,6 +72,19 @@ impl CPU {
     fn mem_write(&mut self, address: u16, data: u8) {
         self.memory[address as usize] = data;
     }
+
+    fn mem_read_u16(&self, address: u16)-> u16 {
+        let index = address as usize;
+        return u16::from_le_bytes([self.memory[index], self.memory[index + 1]]);
+    }
+
+    fn mem_write_u16(&mut self, address: u16, data: u16) {
+        let bytes = data.to_le_bytes();
+        let index = address as usize;
+        self.memory[index] = bytes[0];
+        self.memory[index + 1] = bytes[1];
+    }
+
 
 
     fn lda(&mut self) {
@@ -171,8 +192,7 @@ mod test_cpu {
     fn tax_correctly_sets_negative_flag() {
         let mut cpu = CPU::new();
         cpu.register_a = 0x05;
-        let program = vec![0xAA, 0x00];
-        cpu.load_and_run(program);
+        cpu.tax();
         assert!(cpu.status & 0b0000_0010 == 0b00);
         assert!(cpu.status & 0b1000_0000 == 0);
         // todo: add test case where the negative flag is 1
@@ -192,7 +212,6 @@ mod test_cpu {
    fn test_5_ops_working_together() {
        let mut cpu = CPU::new();
        cpu.load_and_run(vec![0xa9, 0xc0, 0xaa, 0xe8, 0x00]);
- 
        assert_eq!(cpu.register_x, 0xc1)
    }
 
@@ -200,8 +219,8 @@ mod test_cpu {
     fn test_inx_overflow() {
         let mut cpu = CPU::new();
         cpu.register_x = 0xff;
-        cpu.load_and_run(vec![0xe8, 0xe8, 0x00]);
-
+        cpu.inx();
+        cpu.inx();
         assert_eq!(cpu.register_x, 1)
     }
 
