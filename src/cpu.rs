@@ -1,3 +1,5 @@
+use once_cell::sync::Lazy;
+use std::{collections::HashMap, hash::Hash};
 pub struct CPU {
     pub register_a: u8,
     pub register_x: u8,
@@ -6,13 +8,123 @@ pub struct CPU {
     memory: [u8; 0xFFFF],
 }
 
+#[derive(Debug)]
+#[allow(non_camel_case_types)]
+enum AddressingMode {
+    Immediate,
+    ZeroPage,
+    ZeroPage_X,
+    ZeroPage_Y,
+    Absolute,
+    Absolute_X,
+    Absolute_Y,
+    Implied,
+    Indirect,
+    Indirect_X,
+    Indirect_Y,
+}
+
+type ExitCode = u8;
+
+struct Instruction {
+    opcode: u8,
+    name: &'static str,
+    bytes: u8,
+    addressing_mode: AddressingMode,
+}
+
+impl Instruction {
+    pub fn new(opcode: u8, name: &'static str, bytes: u8, addressing_mode: AddressingMode) -> Self {
+        Instruction {
+            opcode: opcode,
+            name: name,
+            bytes: bytes,
+            addressing_mode: addressing_mode,
+        }
+    }
+}
+
+static INSTRUCTIONS: Lazy<HashMap<u8, Instruction>> = Lazy::new(|| {
+    vec![
+        Instruction {
+            opcode: 0x00,
+            name: "BRK",
+            bytes: 1,
+            addressing_mode: AddressingMode::Implied,
+        },
+        Instruction {
+            opcode: 0xA9,
+            name: "LDA",
+            bytes: 2,
+            addressing_mode: AddressingMode::Immediate,
+        },
+        Instruction {
+            opcode: 0xA5,
+            name: "LDA",
+            bytes: 2,
+            addressing_mode: AddressingMode::ZeroPage,
+        },
+        Instruction {
+            opcode: 0xB5,
+            name: "LDA",
+            bytes: 2,
+            addressing_mode: AddressingMode::ZeroPage_X,
+        },
+        Instruction {
+            opcode: 0xAD,
+            name: "LDA",
+            bytes: 3,
+            addressing_mode: AddressingMode::Absolute,
+        },
+        Instruction {
+            opcode: 0xBD,
+            name: "LDA",
+            bytes: 3,
+            addressing_mode: AddressingMode::Absolute_X,
+        },
+        Instruction {
+            opcode: 0xB9,
+            name: "LDA",
+            bytes: 3,
+            addressing_mode: AddressingMode::Absolute_Y,
+        },
+        Instruction {
+            opcode: 0xA1,
+            name: "LDA",
+            bytes: 2,
+            addressing_mode: AddressingMode::Indirect_X,
+        },
+        Instruction {
+            opcode: 0xB1,
+            name: "LDA",
+            bytes: 2,
+            addressing_mode: AddressingMode::Indirect_Y,
+        },
+        Instruction {
+            opcode: 0xAA,
+            name: "TAX",
+            bytes: 1,
+            addressing_mode: AddressingMode::Implied,
+        },
+        Instruction {
+            opcode: 0xE8,
+            name: "INX",
+            bytes: 1,
+            addressing_mode: AddressingMode::Implied,
+        },
+    ]
+    .into_iter()
+    .map(|instruction| (instruction.opcode, instruction))
+    .collect()
+});
+
 impl CPU {
     pub fn new() -> Self {
         CPU {
             register_a: 0,
-            register_x: 0,       // todo: check reference, should this be initialized?
+            register_x: 0, // todo: check reference, should this be initialized?
             status: 0, // todo: according to nesdev wiki, the 5th bit is always 1, https://www.nesdev.org/wiki/Status_flags
-            program_counter: 0, // should this start at 0x8000?
+            program_counter: 0,
             memory: [0; 0xFFFF], // should everything be initialized to zero?
         }
     }
@@ -32,32 +144,38 @@ impl CPU {
 
     fn run(&mut self) {
         loop {
-            let opscode = self.memory[self.program_counter as usize];
+            let opcode = self.memory[self.program_counter as usize];
             self.program_counter += 1;
 
-            match opscode {
-                0x00 => {
-                    return;
-                }
+            let instruction = &INSTRUCTIONS[&opcode];
 
-                0xA9 => {
-                    self.lda();
-                }
-
-                0xAA => {
-                    self.tax();
-                }
-
-                0xE8 => {
-                    self.inx();
-                }
-                _ => {
-                    todo!();
-                }
+            if let Some(_) = self.execute(&instruction) {
+                return;
             }
+            self.program_counter += (instruction.bytes as u16) - 1;
         }
     }
 
+    fn execute(&mut self, instruction: &Instruction) -> Option<ExitCode> {
+        match instruction.name {
+            "BRK" => Some(0),
+            "LDA" => {
+                self.lda(&instruction.addressing_mode);
+                None
+            }
+            "TAX" => {
+                self.tax();
+                None
+            }
+            "INX" => {
+                self.inx();
+                None
+            }
+            _ => {
+                todo!();
+            }
+        }
+    }
     fn load(&mut self, program: Vec<u8>) {
         self.memory[0x8000..(0x8000 + program.len())].copy_from_slice(&program[..]);
         self.mem_write_u16(0xFFFC, 0x8000);
@@ -80,15 +198,23 @@ impl CPU {
         let bytes = data.to_le_bytes();
         let index = address as usize;
         self.memory[index] = bytes[0];
+        println!("Writing {:#01x} to address {:#01x}", bytes[0], index);
         self.memory[index + 1] = bytes[1];
+        println!("Writing {:#01x} to address {:#01x}", bytes[1], index + 1);
     }
 
-    fn lda(&mut self) {
-        self.register_a = self.memory[self.program_counter as usize];
+    fn get_operand_address(&mut self, addressing_mode: &AddressingMode) -> u16 {
+        match addressing_mode {
+            AddressingMode::Immediate => self.program_counter,
+            _ => {
+                todo!();
+            }
+        }
+    }
 
-        // consider moving this to interpret() so that only one method can manipulate the program counter
-        self.program_counter += 1;
-
+    fn lda(&mut self, addressing_mode: &AddressingMode) {
+        let index = self.get_operand_address(addressing_mode);
+        self.register_a = self.memory[index as usize];
         self.status = CPU::update_zero_flag(self.status, self.register_a);
         self.status = self.update_negative_flag(self.status, self.register_a);
     }
@@ -214,4 +340,36 @@ mod test_cpu {
         cpu.inx();
         assert_eq!(cpu.register_x, 1)
     }
+
+    #[test]
+    fn test_mem_read() {
+        let mut cpu = CPU::new();
+        cpu.memory[0x00AA] = 12;
+        assert_eq!(cpu.mem_read(0x00AA), 12);
+    }
+
+    #[test]
+    fn test_mem_write() {
+        let mut cpu = CPU::new();
+        cpu.mem_write(0x00AA, 12);
+        assert_eq!(cpu.memory[0x00AA], 12);
+    }
+
+    #[test]
+    fn test_mem_write_u16() {
+        let mut cpu = CPU::new();
+        cpu.mem_write_u16(0x00AA, 0x8000);
+        assert_eq!(cpu.memory[0x00AA], 0x00);
+        assert_eq!(cpu.memory[0x00AB], 0x80);
+    }
+
+    #[test]
+    fn test_mem_read_u16() {
+        let mut cpu = CPU::new();
+        cpu.memory[0x00AA] = 0x00;
+        cpu.memory[0x00AB] = 0x80;
+        assert_eq!(cpu.mem_read_u16(0x00AA), 0x8000);
+    }
+
+    // todo: add parameterized test for get_operand_address
 }
