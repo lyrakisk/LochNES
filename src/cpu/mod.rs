@@ -1,9 +1,12 @@
 mod instructions;
 
+use std::ops::Add;
+
 use crate::cpu::instructions::*;
 
 type ExitCode = u8;
 
+#[derive(Debug)]
 pub struct CPU {
     pub register_a: u8,
     pub register_x: u8,
@@ -52,6 +55,10 @@ impl CPU {
 
     fn execute(&mut self, instruction: &Instruction) -> Option<ExitCode> {
         match instruction.name {
+            "AND" => {
+                self.and(&instruction.addressing_mode);
+                None
+            }
             "BRK" => Some(0),
             "LDA" => {
                 self.lda(&instruction.addressing_mode);
@@ -70,6 +77,7 @@ impl CPU {
             }
         }
     }
+    
     fn load(&mut self, program: Vec<u8>) {
         self.memory[0x8000..(0x8000 + program.len())].copy_from_slice(&program[..]);
         self.mem_write_u16(0xFFFC, 0x8000);
@@ -104,6 +112,14 @@ impl CPU {
                 todo!();
             }
         }
+    }
+
+    fn and(&mut self, addressing_mode: &AddressingMode) {
+        let index = self.get_operand_address(addressing_mode);
+        self.register_a = self.register_a & self.memory[index as usize];
+        self.status = CPU::update_zero_flag(self.status, self.register_a);
+        self.status = self.update_negative_flag(self.status, self.register_a);
+
     }
 
     fn lda(&mut self, addressing_mode: &AddressingMode) {
@@ -263,6 +279,19 @@ mod test_cpu {
         cpu.memory[0x00AA] = 0x00;
         cpu.memory[0x00AB] = 0x80;
         assert_eq!(cpu.mem_read_u16(0x00AA), 0x8000);
+    }
+
+    #[test]
+    fn test_and() {
+        let mut cpu = CPU::new();
+        cpu.register_a = 0b1001_1001;
+        cpu.memory[0xFF00 as usize] = 0b1111_1111;
+        cpu.program_counter = 0xFF00;
+        
+        let addressing_mode = AddressingMode::Immediate;
+        cpu.and(&addressing_mode);
+        
+        assert_eq!(cpu.register_a, 0b1001_1001);
     }
 
     // todo: add parameterized test for get_operand_address

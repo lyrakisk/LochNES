@@ -38,6 +38,22 @@ impl Instruction {
 #[rustfmt::skip]
 pub static INSTRUCTIONS: Lazy<HashMap<u8, Instruction>> = Lazy::new(|| {
     vec![
+        Instruction {opcode: 0x69, name: "ADC", bytes: 2, addressing_mode: AddressingMode::Immediate},
+        Instruction {opcode: 0x65, name: "ADC", bytes: 2, addressing_mode: AddressingMode::ZeroPage},
+        Instruction {opcode: 0x75, name: "ADC", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X},
+        Instruction {opcode: 0x6D, name: "ADC", bytes: 3, addressing_mode: AddressingMode::Absolute},
+        Instruction {opcode: 0x7D, name: "ADC", bytes: 3, addressing_mode: AddressingMode::Absolute_X},
+        Instruction {opcode: 0x79, name: "ADC", bytes: 3, addressing_mode: AddressingMode::Absolute_Y},
+        Instruction {opcode: 0x61, name: "ADC", bytes: 2, addressing_mode: AddressingMode::Indirect_X},
+        Instruction {opcode: 0x71, name: "ADC", bytes: 2, addressing_mode: AddressingMode::Indirect_Y},
+        Instruction {opcode: 0x29, name: "AND", bytes: 2, addressing_mode: AddressingMode::Immediate},
+        Instruction {opcode: 0x25, name: "AND", bytes: 2, addressing_mode: AddressingMode::ZeroPage},
+        Instruction {opcode: 0x35, name: "AND", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X},
+        Instruction {opcode: 0x2D, name: "AND", bytes: 3, addressing_mode: AddressingMode::Absolute},
+        Instruction {opcode: 0x3D, name: "AND", bytes: 3, addressing_mode: AddressingMode::Absolute_X},
+        Instruction {opcode: 0x39, name: "AND", bytes: 3, addressing_mode: AddressingMode::Absolute_Y},
+        Instruction {opcode: 0x21, name: "AND", bytes: 2, addressing_mode: AddressingMode::Indirect_X},
+        Instruction {opcode: 0x31, name: "AND", bytes: 2, addressing_mode: AddressingMode::Indirect_Y},
         Instruction {opcode: 0x00, name: "BRK", bytes: 1, addressing_mode: AddressingMode::Implied},
         Instruction {opcode: 0xA9, name: "LDA", bytes: 2, addressing_mode: AddressingMode::Immediate},
         Instruction {opcode: 0xA5, name: "LDA", bytes: 2, addressing_mode: AddressingMode::ZeroPage},
