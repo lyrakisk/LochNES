@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use once_cell::sync::Lazy;
+use std::collections::HashMap;
 
 #[derive(Debug)]
 #[allow(non_camel_case_types)]
@@ -35,74 +35,20 @@ impl Instruction {
     }
 }
 
+#[rustfmt::skip]
 pub static INSTRUCTIONS: Lazy<HashMap<u8, Instruction>> = Lazy::new(|| {
     vec![
-        Instruction {
-            opcode: 0x00,
-            name: "BRK",
-            bytes: 1,
-            addressing_mode: AddressingMode::Implied,
-        },
-        Instruction {
-            opcode: 0xA9,
-            name: "LDA",
-            bytes: 2,
-            addressing_mode: AddressingMode::Immediate,
-        },
-        Instruction {
-            opcode: 0xA5,
-            name: "LDA",
-            bytes: 2,
-            addressing_mode: AddressingMode::ZeroPage,
-        },
-        Instruction {
-            opcode: 0xB5,
-            name: "LDA",
-            bytes: 2,
-            addressing_mode: AddressingMode::ZeroPage_X,
-        },
-        Instruction {
-            opcode: 0xAD,
-            name: "LDA",
-            bytes: 3,
-            addressing_mode: AddressingMode::Absolute,
-        },
-        Instruction {
-            opcode: 0xBD,
-            name: "LDA",
-            bytes: 3,
-            addressing_mode: AddressingMode::Absolute_X,
-        },
-        Instruction {
-            opcode: 0xB9,
-            name: "LDA",
-            bytes: 3,
-            addressing_mode: AddressingMode::Absolute_Y,
-        },
-        Instruction {
-            opcode: 0xA1,
-            name: "LDA",
-            bytes: 2,
-            addressing_mode: AddressingMode::Indirect_X,
-        },
-        Instruction {
-            opcode: 0xB1,
-            name: "LDA",
-            bytes: 2,
-            addressing_mode: AddressingMode::Indirect_Y,
-        },
-        Instruction {
-            opcode: 0xAA,
-            name: "TAX",
-            bytes: 1,
-            addressing_mode: AddressingMode::Implied,
-        },
-        Instruction {
-            opcode: 0xE8,
-            name: "INX",
-            bytes: 1,
-            addressing_mode: AddressingMode::Implied,
-        },
+        Instruction {opcode: 0x00, name: "BRK", bytes: 1, addressing_mode: AddressingMode::Implied},
+        Instruction {opcode: 0xA9, name: "LDA", bytes: 2, addressing_mode: AddressingMode::Immediate},
+        Instruction {opcode: 0xA5, name: "LDA", bytes: 2, addressing_mode: AddressingMode::ZeroPage},
+        Instruction {opcode: 0xB5, name: "LDA", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X},
+        Instruction {opcode: 0xAD, name: "LDA", bytes: 3, addressing_mode: AddressingMode::Absolute},
+        Instruction {opcode: 0xBD, name: "LDA", bytes: 3, addressing_mode: AddressingMode::Absolute_X},
+        Instruction {opcode: 0xB9, name: "LDA", bytes: 3, addressing_mode: AddressingMode::Absolute_Y},
+        Instruction {opcode: 0xA1, name: "LDA", bytes: 2, addressing_mode: AddressingMode::Indirect_X},
+        Instruction {opcode: 0xB1, name: "LDA", bytes: 2, addressing_mode: AddressingMode::Indirect_Y},
+        Instruction {opcode: 0xAA, name: "TAX", bytes: 1, addressing_mode: AddressingMode::Implied},
+        Instruction {opcode: 0xE8, name: "INX", bytes: 1, addressing_mode: AddressingMode::Implied},
     ]
     .into_iter()
     .map(|instruction| (instruction.opcode, instruction))
