@@ -1,5 +1,9 @@
-use once_cell::sync::Lazy;
-use std::{collections::HashMap, hash::Hash};
+mod instructions;
+
+use crate::cpu::instructions::*;
+
+type ExitCode = u8;
+
 pub struct CPU {
     pub register_a: u8,
     pub register_x: u8,
@@ -7,116 +11,6 @@ pub struct CPU {
     pub program_counter: u16,
     memory: [u8; 0xFFFF],
 }
-
-#[derive(Debug)]
-#[allow(non_camel_case_types)]
-enum AddressingMode {
-    Immediate,
-    ZeroPage,
-    ZeroPage_X,
-    ZeroPage_Y,
-    Absolute,
-    Absolute_X,
-    Absolute_Y,
-    Implied,
-    Indirect,
-    Indirect_X,
-    Indirect_Y,
-}
-
-type ExitCode = u8;
-
-struct Instruction {
-    opcode: u8,
-    name: &'static str,
-    bytes: u8,
-    addressing_mode: AddressingMode,
-}
-
-impl Instruction {
-    pub fn new(opcode: u8, name: &'static str, bytes: u8, addressing_mode: AddressingMode) -> Self {
-        Instruction {
-            opcode: opcode,
-            name: name,
-            bytes: bytes,
-            addressing_mode: addressing_mode,
-        }
-    }
-}
-
-static INSTRUCTIONS: Lazy<HashMap<u8, Instruction>> = Lazy::new(|| {
-    vec![
-        Instruction {
-            opcode: 0x00,
-            name: "BRK",
-            bytes: 1,
-            addressing_mode: AddressingMode::Implied,
-        },
-        Instruction {
-            opcode: 0xA9,
-            name: "LDA",
-            bytes: 2,
-            addressing_mode: AddressingMode::Immediate,
-        },
-        Instruction {
-            opcode: 0xA5,
-            name: "LDA",
-            bytes: 2,
-            addressing_mode: AddressingMode::ZeroPage,
-        },
-        Instruction {
-            opcode: 0xB5,
-            name: "LDA",
-            bytes: 2,
-            addressing_mode: AddressingMode::ZeroPage_X,
-        },
-        Instruction {
-            opcode: 0xAD,
-            name: "LDA",
-            bytes: 3,
-            addressing_mode: AddressingMode::Absolute,
-        },
-        Instruction {
-            opcode: 0xBD,
-            name: "LDA",
-            bytes: 3,
-            addressing_mode: AddressingMode::Absolute_X,
-        },
-        Instruction {
-            opcode: 0xB9,
-            name: "LDA",
-            bytes: 3,
-            addressing_mode: AddressingMode::Absolute_Y,
-        },
-        Instruction {
-            opcode: 0xA1,
-            name: "LDA",
-            bytes: 2,
-            addressing_mode: AddressingMode::Indirect_X,
-        },
-        Instruction {
-            opcode: 0xB1,
-            name: "LDA",
-            bytes: 2,
-            addressing_mode: AddressingMode::Indirect_Y,
-        },
-        Instruction {
-            opcode: 0xAA,
-            name: "TAX",
-            bytes: 1,
-            addressing_mode: AddressingMode::Implied,
-        },
-        Instruction {
-            opcode: 0xE8,
-            name: "INX",
-            bytes: 1,
-            addressing_mode: AddressingMode::Implied,
-        },
-    ]
-    .into_iter()
-    .map(|instruction| (instruction.opcode, instruction))
-    .collect()
-});
 
 impl CPU {
     pub fn new() -> Self {
