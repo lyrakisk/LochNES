@@ -77,7 +77,7 @@ impl CPU {
             }
         }
     }
-    
+
     fn load(&mut self, program: Vec<u8>) {
         self.memory[0x8000..(0x8000 + program.len())].copy_from_slice(&program[..]);
         self.mem_write_u16(0xFFFC, 0x8000);
@@ -119,7 +119,6 @@ impl CPU {
         self.register_a = self.register_a & self.memory[index as usize];
         self.status = CPU::update_zero_flag(self.status, self.register_a);
         self.status = self.update_negative_flag(self.status, self.register_a);
-
     }
 
     fn lda(&mut self, addressing_mode: &AddressingMode) {
@@ -287,10 +286,10 @@ mod test_cpu {
         cpu.register_a = 0b1001_1001;
         cpu.memory[0xFF00 as usize] = 0b1111_1111;
         cpu.program_counter = 0xFF00;
-        
+
         let addressing_mode = AddressingMode::Immediate;
         cpu.and(&addressing_mode);
-        
+
         assert_eq!(cpu.register_a, 0b1001_1001);
     }
 
