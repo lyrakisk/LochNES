@@ -4,6 +4,8 @@ use std::collections::HashMap;
 #[derive(Debug)]
 #[allow(non_camel_case_types)]
 pub enum AddressingMode {
+    Implicit,
+    Accumulator,
     Immediate,
     ZeroPage,
     ZeroPage_X,
@@ -11,7 +13,6 @@ pub enum AddressingMode {
     Absolute,
     Absolute_X,
     Absolute_Y,
-    Implied,
     Indirect,
     Indirect_X,
     Indirect_Y,
@@ -54,7 +55,7 @@ pub static INSTRUCTIONS: Lazy<HashMap<u8, Instruction>> = Lazy::new(|| {
         Instruction {opcode: 0x39, name: "AND", bytes: 3, addressing_mode: AddressingMode::Absolute_Y},
         Instruction {opcode: 0x21, name: "AND", bytes: 2, addressing_mode: AddressingMode::Indirect_X},
         Instruction {opcode: 0x31, name: "AND", bytes: 2, addressing_mode: AddressingMode::Indirect_Y},
-        Instruction {opcode: 0x00, name: "BRK", bytes: 1, addressing_mode: AddressingMode::Implied},
+        Instruction {opcode: 0x00, name: "BRK", bytes: 1, addressing_mode: AddressingMode::Implicit},
         Instruction {opcode: 0xA9, name: "LDA", bytes: 2, addressing_mode: AddressingMode::Immediate},
         Instruction {opcode: 0xA5, name: "LDA", bytes: 2, addressing_mode: AddressingMode::ZeroPage},
         Instruction {opcode: 0xB5, name: "LDA", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X},
@@ -63,8 +64,8 @@ pub static INSTRUCTIONS: Lazy<HashMap<u8, Instruction>> = Lazy::new(|| {
         Instruction {opcode: 0xB9, name: "LDA", bytes: 3, addressing_mode: AddressingMode::Absolute_Y},
         Instruction {opcode: 0xA1, name: "LDA", bytes: 2, addressing_mode: AddressingMode::Indirect_X},
         Instruction {opcode: 0xB1, name: "LDA", bytes: 2, addressing_mode: AddressingMode::Indirect_Y},
-        Instruction {opcode: 0xAA, name: "TAX", bytes: 1, addressing_mode: AddressingMode::Implied},
-        Instruction {opcode: 0xE8, name: "INX", bytes: 1, addressing_mode: AddressingMode::Implied},
+        Instruction {opcode: 0xAA, name: "TAX", bytes: 1, addressing_mode: AddressingMode::Implicit},
+        Instruction {opcode: 0xE8, name: "INX", bytes: 1, addressing_mode: AddressingMode::Implicit},
     ]
     .into_iter()
     .map(|instruction| (instruction.opcode, instruction))
