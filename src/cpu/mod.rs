@@ -115,9 +115,9 @@ impl CPU {
             }
             AddressingMode::Immediate => self.program_counter,
             AddressingMode::ZeroPage => self.mem_read(self.program_counter) as u16,
-            AddressingMode::ZeroPage_X => {
-                todo!();
-            }
+            AddressingMode::ZeroPage_X => self
+                .mem_read(self.program_counter)
+                .wrapping_add(self.register_x) as u16,
             AddressingMode::ZeroPage_Y => {
                 todo!();
             }
@@ -336,5 +336,15 @@ mod test_cpu {
         cpu.mem_write(0xAAAA, 0xAA);
         let result = cpu.get_operand_address(&AddressingMode::ZeroPage);
         assert_eq!(result, 0xAA);
+    }
+
+    #[test]
+    fn test_addressing_mode_zero_page_x() {
+        let mut cpu = CPU::new();
+        cpu.program_counter = 0xAAAA;
+        cpu.mem_write(0xAAAA, 0x80);
+        cpu.register_x = 0xFF;
+        let result = cpu.get_operand_address(&AddressingMode::ZeroPage_X);
+        assert_eq!(result, 0x7F);
     }
 }
