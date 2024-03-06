@@ -107,20 +107,38 @@ impl CPU {
 
     fn get_operand_address(&mut self, addressing_mode: &AddressingMode) -> u16 {
         match addressing_mode {
-            AddressingMode::Implicit => {panic!("Cannot get operand address when the Addressing Mode is Implicit");},
-            AddressingMode::Accumulator => {panic!("Cannot get operand address when the Addressing Mode is Accumulator");},
+            AddressingMode::Implicit => {
+                panic!("Cannot get operand address when the Addressing Mode is Implicit");
+            }
+            AddressingMode::Accumulator => {
+                panic!("Cannot get operand address when the Addressing Mode is Accumulator");
+            }
             AddressingMode::Immediate => self.program_counter,
-            AddressingMode::ZeroPage => {
-                self.mem_read(self.program_counter) as u16
-            },
-            AddressingMode::ZeroPage_X => {todo!();},
-            AddressingMode::ZeroPage_Y => {todo!();},
-            AddressingMode::Absolute => {todo!();},
-            AddressingMode::Absolute_X => {todo!();},
-            AddressingMode::Absolute_Y => {todo!();},
-            AddressingMode::Indirect => {todo!();},
-            AddressingMode::Indirect_X => {todo!();},
-            AddressingMode::Indirect_Y => {todo!();},
+            AddressingMode::ZeroPage => self.mem_read(self.program_counter) as u16,
+            AddressingMode::ZeroPage_X => {
+                todo!();
+            }
+            AddressingMode::ZeroPage_Y => {
+                todo!();
+            }
+            AddressingMode::Absolute => {
+                todo!();
+            }
+            AddressingMode::Absolute_X => {
+                todo!();
+            }
+            AddressingMode::Absolute_Y => {
+                todo!();
+            }
+            AddressingMode::Indirect => {
+                todo!();
+            }
+            AddressingMode::Indirect_X => {
+                todo!();
+            }
+            AddressingMode::Indirect_Y => {
+                todo!();
+            }
         }
     }
 
