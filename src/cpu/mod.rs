@@ -10,6 +10,7 @@ type ExitCode = u8;
 pub struct CPU {
     pub register_a: u8,
     pub register_x: u8,
+    pub register_y: u8,
     pub status: u8,
     pub program_counter: u16,
     memory: [u8; 0xFFFF],
@@ -20,6 +21,7 @@ impl CPU {
         CPU {
             register_a: 0,
             register_x: 0, // todo: check reference, should this be initialized?
+            register_y: 0,
             status: 0, // todo: according to nesdev wiki, the 5th bit is always 1, https://www.nesdev.org/wiki/Status_flags
             program_counter: 0,
             memory: [0; 0xFFFF], // should everything be initialized to zero?
@@ -118,9 +120,9 @@ impl CPU {
             AddressingMode::ZeroPage_X => self
                 .mem_read(self.program_counter)
                 .wrapping_add(self.register_x) as u16,
-            AddressingMode::ZeroPage_Y => {
-                todo!();
-            }
+            AddressingMode::ZeroPage_Y => self
+                .mem_read(self.program_counter)
+                .wrapping_add(self.register_y) as u16,
             AddressingMode::Absolute => {
                 todo!();
             }
@@ -345,6 +347,16 @@ mod test_cpu {
         cpu.mem_write(0xAAAA, 0x80);
         cpu.register_x = 0xFF;
         let result = cpu.get_operand_address(&AddressingMode::ZeroPage_X);
+        assert_eq!(result, 0x7F);
+    }
+
+    #[test]
+    fn test_addressing_mode_zero_page_y() {
+        let mut cpu = CPU::new();
+        cpu.program_counter = 0xAAAA;
+        cpu.mem_write(0xAAAA, 0x80);
+        cpu.register_y = 0xFF;
+        let result = cpu.get_operand_address(&AddressingMode::ZeroPage_Y);
         assert_eq!(result, 0x7F);
     }
 }
