@@ -107,10 +107,20 @@ impl CPU {
 
     fn get_operand_address(&mut self, addressing_mode: &AddressingMode) -> u16 {
         match addressing_mode {
+            AddressingMode::Implicit => {panic!("Cannot get operand address when the Addressing Mode is Implicit");},
+            AddressingMode::Accumulator => {panic!("Cannot get operand address when the Addressing Mode is Accumulator");},
             AddressingMode::Immediate => self.program_counter,
-            _ => {
-                todo!();
-            }
+            AddressingMode::ZeroPage => {
+                self.mem_read(self.program_counter) as u16
+            },
+            AddressingMode::ZeroPage_X => {todo!();},
+            AddressingMode::ZeroPage_Y => {todo!();},
+            AddressingMode::Absolute => {todo!();},
+            AddressingMode::Absolute_X => {todo!();},
+            AddressingMode::Absolute_Y => {todo!();},
+            AddressingMode::Indirect => {todo!();},
+            AddressingMode::Indirect_X => {todo!();},
+            AddressingMode::Indirect_Y => {todo!();},
         }
     }
 
@@ -293,5 +303,20 @@ mod test_cpu {
         assert_eq!(cpu.register_a, 0b1001_1001);
     }
 
-    // todo: add parameterized test for get_operand_address
+    #[test]
+    fn test_addressing_mode_immediate() {
+        let mut cpu = CPU::new();
+        cpu.program_counter = 0x8000;
+        let result = cpu.get_operand_address(&AddressingMode::Immediate);
+        assert_eq!(result, 0x8000);
+    }
+
+    #[test]
+    fn test_addressing_mode_zero_page() {
+        let mut cpu = CPU::new();
+        cpu.program_counter = 0xAAAA;
+        cpu.mem_write(0xAAAA, 0xAA);
+        let result = cpu.get_operand_address(&AddressingMode::ZeroPage);
+        assert_eq!(result, 0xAA);
+    }
 }
