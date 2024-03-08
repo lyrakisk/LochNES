@@ -124,12 +124,12 @@ impl CPU {
                 .mem_read(self.program_counter)
                 .wrapping_add(self.register_y) as u16,
             AddressingMode::Absolute => self.mem_read_u16(self.program_counter),
-            AddressingMode::Absolute_X => {
-                todo!();
-            }
-            AddressingMode::Absolute_Y => {
-                todo!();
-            }
+            AddressingMode::Absolute_X => self
+                .mem_read_u16(self.program_counter)
+                .wrapping_add(self.register_x as u16),
+            AddressingMode::Absolute_Y => self
+                .mem_read_u16(self.program_counter)
+                .wrapping_add(self.register_y as u16),
             AddressingMode::Indirect => {
                 todo!();
             }
@@ -365,5 +365,25 @@ mod test_cpu {
         cpu.mem_write_u16(0xAAAA, 0x8000);
         let result = cpu.get_operand_address(&AddressingMode::Absolute);
         assert_eq!(result, 0x8000);
+    }
+
+    #[test]
+    fn test_addressing_mode_absolute_x() {
+        let mut cpu = CPU::new();
+        cpu.program_counter = 0xAAAA;
+        cpu.register_x = 0x80;
+        cpu.mem_write_u16(0xAAAA, 0x8000);
+        let result = cpu.get_operand_address(&AddressingMode::Absolute_X);
+        assert_eq!(result, 0x8080);
+    }
+
+    #[test]
+    fn test_addressing_mode_absolute_y() {
+        let mut cpu = CPU::new();
+        cpu.program_counter = 0xAAAA;
+        cpu.register_y = 0x80;
+        cpu.mem_write_u16(0xAAAA, 0x8000);
+        let result = cpu.get_operand_address(&AddressingMode::Absolute_Y);
+        assert_eq!(result, 0x8080);
     }
 }
