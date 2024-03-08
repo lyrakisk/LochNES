@@ -1,6 +1,6 @@
 mod instructions;
 
-use std::ops::Add;
+use std::ops::{Add, Shl};
 
 use crate::cpu::instructions::*;
 
@@ -123,9 +123,7 @@ impl CPU {
             AddressingMode::ZeroPage_Y => self
                 .mem_read(self.program_counter)
                 .wrapping_add(self.register_y) as u16,
-            AddressingMode::Absolute => {
-                todo!();
-            }
+            AddressingMode::Absolute => self.mem_read_u16(self.program_counter),
             AddressingMode::Absolute_X => {
                 todo!();
             }
@@ -358,5 +356,14 @@ mod test_cpu {
         cpu.register_y = 0xFF;
         let result = cpu.get_operand_address(&AddressingMode::ZeroPage_Y);
         assert_eq!(result, 0x7F);
+    }
+
+    #[test]
+    fn test_addressing_mode_absolute() {
+        let mut cpu = CPU::new();
+        cpu.program_counter = 0xAAAA;
+        cpu.mem_write_u16(0xAAAA, 0x8000);
+        let result = cpu.get_operand_address(&AddressingMode::Absolute);
+        assert_eq!(result, 0x8000);
     }
 }
