@@ -135,7 +135,10 @@ impl CPU {
                 self.mem_read_u16(indirect_address)
             }
             AddressingMode::Indirect_X => {
-                todo!();
+                let indirect_address = self
+                    .mem_read(self.program_counter)
+                    .wrapping_add(self.register_x);
+                self.mem_read_u16(indirect_address as u16)
             }
             AddressingMode::Indirect_Y => {
                 todo!();
@@ -391,13 +394,23 @@ mod test_cpu {
     }
 
     #[test]
-
     fn test_addressing_mode_indirect() {
         let mut cpu = CPU::new();
         cpu.program_counter = 0x8000;
         cpu.mem_write_u16(0x8000, 0x0120);
         cpu.mem_write_u16(0x0120, 0xBAFC);
         let result = cpu.get_operand_address(&AddressingMode::Indirect);
+        assert_eq!(result, 0xBAFC);
+    }
+
+    #[test]
+    fn test_addressing_mode_indexed_indirect() {
+        let mut cpu = CPU::new();
+        cpu.program_counter = 0x8000;
+        cpu.mem_write(0x8000, 0x20);
+        cpu.mem_write_u16(0x0021, 0xBAFC);
+        cpu.register_x = 0x01;
+        let result = cpu.get_operand_address(&AddressingMode::Indirect_X);
         assert_eq!(result, 0xBAFC);
     }
 }
