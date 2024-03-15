@@ -188,41 +188,41 @@ impl CPU {
             self.clear_carry_flag()
         };
         self.update_negative_flag(self.status, self.register_a);
-        CPU::update_zero_flag(self.status, self.register_a);
+        self.update_zero_flag(self.register_a);
     }
 
     fn and(&mut self, addressing_mode: &AddressingMode) {
         let index = self.get_operand_address(addressing_mode);
         self.register_a = self.register_a & self.memory[index as usize];
-        self.status = CPU::update_zero_flag(self.status, self.register_a);
+        self.update_zero_flag(self.register_a);
         self.status = self.update_negative_flag(self.status, self.register_a);
     }
 
     fn lda(&mut self, addressing_mode: &AddressingMode) {
         let index = self.get_operand_address(addressing_mode);
         self.register_a = self.memory[index as usize];
-        self.status = CPU::update_zero_flag(self.status, self.register_a);
+        self.update_zero_flag(self.register_a);
         self.status = self.update_negative_flag(self.status, self.register_a);
     }
 
     fn tax(&mut self) {
         self.register_x = self.register_a;
 
-        self.status = CPU::update_zero_flag(self.status, self.register_x);
+        self.update_zero_flag(self.register_x);
         self.status = self.update_negative_flag(self.status, self.register_x);
     }
 
     fn inx(&mut self) {
         self.register_x = self.register_x.wrapping_add(1);
-        self.status = CPU::update_zero_flag(self.status, self.register_a);
+        self.update_zero_flag(self.register_a);
         self.status = self.update_negative_flag(self.status, self.register_a);
     }
 
-    fn update_zero_flag(status_register: u8, register: u8) -> u8 {
+    fn update_zero_flag(&mut self, register: u8) {
         if register == 0 {
-            return status_register | 0b0000_0010;
+            self.status = self.status | 0b0000_0010;
         } else {
-            return status_register & 0b1111_1101;
+            self.status = self.status & 0b1111_1101;
         }
     }
 
@@ -241,30 +241,12 @@ mod test_cpu {
     use std::result;
     use test_case::test_case;
 
-    fn update_zero_flag_test_case(
-        status_register: u8,
-        register: u8,
-        expected: u8,
-    ) -> Result<(), String> {
-        let result = CPU::update_zero_flag(status_register, register);
-        if result != expected {
-            Err(format!(
-                "Input ({}, {}) was expected to return {}, but returned {}",
-                status_register, register, expected, result
-            ))
-        } else {
-            Ok(())
-        }
-    }
-
-    #[test]
-    fn run_update_zero_flag_tests() -> Result<(), String> {
-        let _examples = [(0b0, 0b0, 0b0000_0010), (0b0000_0010, 0b10, 0b0)]
-            .into_iter()
-            .try_for_each(|(status_register, register, expected)| {
-                update_zero_flag_test_case(status_register, register, expected)
-            })?;
-        Ok(())
+    #[test_case(0b0, 0b0, 0b0000_0010)]
+    #[test_case(0b0000_0010, 0b10, 0b0)]
+    fn update_zero_flag_test_case(status: u8, register: u8, expected: u8) {
+        let mut cpu = CPU::new();
+        cpu.update_zero_flag(register);
+        assert_eq!(cpu.status, expected);
     }
 
     #[test]
