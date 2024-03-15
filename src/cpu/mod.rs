@@ -187,7 +187,7 @@ impl CPU {
         } else {
             self.clear_carry_flag()
         };
-        self.update_negative_flag(self.status, self.register_a);
+        self.update_negative_flag(self.register_a);
         self.update_zero_flag(self.register_a);
     }
 
@@ -195,27 +195,27 @@ impl CPU {
         let index = self.get_operand_address(addressing_mode);
         self.register_a = self.register_a & self.memory[index as usize];
         self.update_zero_flag(self.register_a);
-        self.status = self.update_negative_flag(self.status, self.register_a);
+        self.update_negative_flag(self.register_a);
     }
 
     fn lda(&mut self, addressing_mode: &AddressingMode) {
         let index = self.get_operand_address(addressing_mode);
         self.register_a = self.memory[index as usize];
         self.update_zero_flag(self.register_a);
-        self.status = self.update_negative_flag(self.status, self.register_a);
+        self.update_negative_flag(self.register_a);
     }
 
     fn tax(&mut self) {
         self.register_x = self.register_a;
 
         self.update_zero_flag(self.register_x);
-        self.status = self.update_negative_flag(self.status, self.register_x);
+        self.update_negative_flag(self.register_x);
     }
 
     fn inx(&mut self) {
         self.register_x = self.register_x.wrapping_add(1);
         self.update_zero_flag(self.register_a);
-        self.status = self.update_negative_flag(self.status, self.register_a);
+        self.update_negative_flag(self.register_a);
     }
 
     fn update_zero_flag(&mut self, register: u8) {
@@ -226,11 +226,11 @@ impl CPU {
         }
     }
 
-    fn update_negative_flag(&self, status_register: u8, register: u8) -> u8 {
+    fn update_negative_flag(&mut self, register: u8) {
         if register & 0b1000_0000 != 0 {
-            return status_register | 0b1000_0000;
+            self.status = self.status | 0b1000_0000;
         } else {
-            return status_register & 0b0111_1111;
+            self.status = self.status & 0b0111_1111;
         }
     }
 }
@@ -238,7 +238,6 @@ impl CPU {
 #[cfg(test)]
 mod test_cpu {
     use super::*;
-    use std::result;
     use test_case::test_case;
 
     #[test_case(0b0, 0b0, 0b0000_0010)]
