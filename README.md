@@ -13,8 +13,8 @@
 - [x] Absolute, X
 - [x] Absolute, Y
 - [x] Indirect
-- [ ] Indexed Indirect
-- [ ] Indirect Indexed
+- [x] Indexed Indirect
+- [x] Indirect Indexed
 ### Instructions
 - [ ] ADC
 - [ ] AND

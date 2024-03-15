@@ -146,6 +146,16 @@ impl CPU {
                     .wrapping_add(self.register_y);
                 self.mem_read_u16(indirect_address as u16)
             }
+            AddressingMode::Indirect_indexed_X => {
+                let indirect_address = self.mem_read_u16(self.program_counter);
+                self.mem_read_u16(indirect_address)
+                    .wrapping_add(self.register_x as u16)
+            }
+            AddressingMode::Indirect_indexed_Y => {
+                let indirect_address = self.mem_read_u16(self.program_counter);
+                self.mem_read_u16(indirect_address)
+                    .wrapping_add(self.register_y as u16)
+            }
         }
     }
 
@@ -426,5 +436,29 @@ mod test_cpu {
         cpu.register_y = 0x01;
         let result = cpu.get_operand_address(&AddressingMode::Indexed_Idirect_Y);
         assert_eq!(result, 0xBAFC);
+    }
+
+    #[test]
+    fn test_addressing_mode_indirect_indexed_x() {
+        let mut cpu = CPU::new();
+        cpu.program_counter = 0x8000;
+        cpu.mem_write(0x8000, 0x52);
+        cpu.mem_write_u16(0x0052, 0xEF05);
+        cpu.register_x = 0x03;
+
+        let result = cpu.get_operand_address(&AddressingMode::Indirect_indexed_X);
+        assert_eq!(result, 0xEF08);
+    }
+
+    #[test]
+    fn test_addressing_mode_indirect_indexed_y() {
+        let mut cpu = CPU::new();
+        cpu.program_counter = 0x8000;
+        cpu.mem_write(0x8000, 0x52);
+        cpu.mem_write_u16(0x0052, 0xEF05);
+        cpu.register_y = 0x03;
+
+        let result = cpu.get_operand_address(&AddressingMode::Indirect_indexed_Y);
+        assert_eq!(result, 0xEF08);
     }
 }

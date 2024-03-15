@@ -16,6 +16,8 @@ pub enum AddressingMode {
     Indirect,
     Indexed_Idirect_X,
     Indexed_Idirect_Y,
+    Indirect_indexed_X,
+    Indirect_indexed_Y,
 }
 
 pub struct Instruction {
