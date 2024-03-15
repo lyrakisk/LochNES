@@ -57,6 +57,10 @@ impl CPU {
 
     fn execute(&mut self, instruction: &Instruction) -> Option<ExitCode> {
         match instruction.name {
+            "ADC" => {
+                self.adc(&instruction.addressing_mode);
+                None
+            }
             "AND" => {
                 self.and(&instruction.addressing_mode);
                 None
@@ -105,6 +109,18 @@ impl CPU {
         println!("Writing {:#01x} to address {:#01x}", bytes[0], index);
         self.memory[index + 1] = bytes[1];
         println!("Writing {:#01x} to address {:#01x}", bytes[1], index + 1);
+    }
+
+    fn set_carry_flag(&mut self) {
+        self.status = self.status | 0b0000_0001;
+    }
+
+    fn get_carry_flag(&self) -> u8 {
+        self.status & 0b0000_0001
+    }
+
+    fn clear_carry_flag(&mut self) {
+        self.status = self.status & 0b1111_1110;
     }
 
     fn get_operand_address(&mut self, addressing_mode: &AddressingMode) -> u16 {
@@ -159,6 +175,22 @@ impl CPU {
         }
     }
 
+    fn adc(&mut self, addressing_mode: &AddressingMode) {
+        let index = self.get_operand_address(addressing_mode) as usize;
+        let carry = self.get_carry_flag();
+        let (temp_sum, overflow_occured_on_first_addition) =
+            self.register_a.overflowing_add(self.memory[index]);
+        let (final_sum, overflow_occured_on_second_addition) = temp_sum.overflowing_add(carry);
+        self.register_a = final_sum;
+        if (overflow_occured_on_first_addition || overflow_occured_on_second_addition) {
+            self.set_carry_flag();
+        } else {
+            self.clear_carry_flag()
+        };
+        self.update_negative_flag(self.status, self.register_a);
+        CPU::update_zero_flag(self.status, self.register_a);
+    }
+
     fn and(&mut self, addressing_mode: &AddressingMode) {
         let index = self.get_operand_address(addressing_mode);
         self.register_a = self.register_a & self.memory[index as usize];
@@ -205,9 +237,9 @@ impl CPU {
 
 #[cfg(test)]
 mod test_cpu {
-    use std::result;
-
     use super::*;
+    use std::result;
+    use test_case::test_case;
 
     fn update_zero_flag_test_case(
         status_register: u8,
@@ -325,6 +357,21 @@ mod test_cpu {
         cpu.memory[0x00AA] = 0x00;
         cpu.memory[0x00AB] = 0x80;
         assert_eq!(cpu.mem_read_u16(0x00AA), 0x8000);
+    }
+
+    #[test_case(0b0000_0000, 0x85, 0x03, 0x88, 0b0000_0000)]
+    #[test_case(0b0000_0000, 0x85, 0x99, 0x1E, 0b0000_0001)]
+    #[test_case(0b0000_0001, 0x5F, 0x42, 0xA2, 0b0000_0000)]
+    fn test_adc(status: u8, acc: u8, nn: u8, expected_acc: u8, expected_carry_flag: u8) {
+        let mut cpu = CPU::new();
+        cpu.program_counter = 0x8000;
+        cpu.register_a = acc;
+        cpu.memory[0x8000] = nn;
+        cpu.status = status;
+
+        cpu.adc(&AddressingMode::Immediate);
+        assert_eq!(cpu.register_a, expected_acc);
+        assert_eq!(cpu.status & 0b0000_0001, expected_carry_flag)
     }
 
     #[test]
