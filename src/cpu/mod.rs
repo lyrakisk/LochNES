@@ -191,11 +191,21 @@ impl CPU {
         }
     }
 
+    fn get_operand(&mut self, addressing_mode: &AddressingMode) -> u8 {
+        match addressing_mode {
+            AddressingMode::Accumulator => self.register_a,
+            _ => {
+                let index = self.get_operand_address(addressing_mode);
+                self.memory[index as usize]
+            }
+        }
+    }
+
     fn adc(&mut self, addressing_mode: &AddressingMode) {
-        let index = self.get_operand_address(addressing_mode) as usize;
+        let operand = self.get_operand(addressing_mode);
         let carry = self.get_carry_flag();
         let (temp_sum, overflow_occured_on_first_addition) =
-            self.register_a.overflowing_add(self.memory[index]);
+            self.register_a.overflowing_add(operand);
         let (final_sum, overflow_occured_on_second_addition) = temp_sum.overflowing_add(carry);
         self.register_a = final_sum;
         if (overflow_occured_on_first_addition || overflow_occured_on_second_addition) {
@@ -208,15 +218,15 @@ impl CPU {
     }
 
     fn and(&mut self, addressing_mode: &AddressingMode) {
-        let index = self.get_operand_address(addressing_mode);
-        self.register_a = self.register_a & self.memory[index as usize];
+        let operand = self.get_operand(addressing_mode);
+        self.register_a = self.register_a & operand;
         self.update_zero_flag(self.register_a);
         self.update_negative_flag(self.register_a);
     }
 
     fn lda(&mut self, addressing_mode: &AddressingMode) {
-        let index = self.get_operand_address(addressing_mode);
-        self.register_a = self.memory[index as usize];
+        let operand = self.get_operand(addressing_mode);
+        self.register_a = operand;
         self.update_zero_flag(self.register_a);
         self.update_negative_flag(self.register_a);
     }
@@ -236,8 +246,7 @@ impl CPU {
 
     fn sbc(&mut self, addressing_mode: &AddressingMode) {
         let minuend = self.register_a;
-        let index = self.get_operand_address(addressing_mode) as usize;
-        let subtrahend = self.memory[index];
+        let subtrahend = self.get_operand(addressing_mode);
 
         let carry = self.get_carry_flag() ^ 0b0000_0001;
 
@@ -548,5 +557,13 @@ mod test_cpu {
 
         let result = cpu.get_operand_address(&AddressingMode::Indirect_indexed_Y);
         assert_eq!(result, 0xEF08);
+    }
+
+    #[test]
+    fn test_get_operand() {
+        let mut cpu = CPU::new();
+        cpu.register_a = 0x80;
+        let result = cpu.get_operand(&AddressingMode::Accumulator);
+        assert_eq!(result, 0x80);
     }
 }
