@@ -198,7 +198,6 @@ impl CPU {
             self.register_a.overflowing_add(self.memory[index]);
         let (final_sum, overflow_occured_on_second_addition) = temp_sum.overflowing_add(carry);
         self.register_a = final_sum;
-        // todo: check if I need to update the overflow flag
         if (overflow_occured_on_first_addition || overflow_occured_on_second_addition) {
             self.set_carry_flag();
         } else {
