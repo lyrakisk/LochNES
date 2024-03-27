@@ -78,6 +78,10 @@ impl CPU {
                 self.inx();
                 None
             }
+            "SBC" => {
+                self.sbc(&instruction.addressing_mode);
+                None
+            }
             _ => {
                 todo!();
             }
@@ -121,6 +125,18 @@ impl CPU {
 
     fn clear_carry_flag(&mut self) {
         self.status = self.status & 0b1111_1110;
+    }
+
+    fn set_overflow_flag(&mut self) {
+        self.status = self.status | 0b0100_0000;
+    }
+
+    fn clear_overflow_flag(&mut self) {
+        self.status = self.status & 0b1011_1111;
+    }
+
+    fn get_overflow_flag(&mut self) {
+        todo!();
     }
 
     fn get_operand_address(&mut self, addressing_mode: &AddressingMode) -> u16 {
@@ -182,6 +198,7 @@ impl CPU {
             self.register_a.overflowing_add(self.memory[index]);
         let (final_sum, overflow_occured_on_second_addition) = temp_sum.overflowing_add(carry);
         self.register_a = final_sum;
+        // todo: check if I need to update the overflow flag
         if (overflow_occured_on_first_addition || overflow_occured_on_second_addition) {
             self.set_carry_flag();
         } else {
@@ -218,6 +235,33 @@ impl CPU {
         self.update_negative_flag(self.register_a);
     }
 
+    fn sbc(&mut self, addressing_mode: &AddressingMode) {
+        let minuend = self.register_a;
+        let index = self.get_operand_address(addressing_mode) as usize;
+        let subtrahend = self.memory[index];
+
+        let carry = self.get_carry_flag() ^ 0b0000_0001;
+
+        let result = minuend.wrapping_sub(subtrahend).wrapping_sub(carry);
+
+        if ((minuend > 0x7F && subtrahend < 0x7F && result < 0x80)
+            || (minuend < 0x80 && subtrahend > 0x7F && result > 0x7F))
+        {
+            self.set_overflow_flag();
+        } else {
+            self.clear_overflow_flag();
+        }
+
+        if (result > 0x7F) {
+            self.clear_carry_flag();
+        } else {
+            self.set_carry_flag();
+        }
+        self.register_a = result;
+        self.update_negative_flag(self.register_a);
+        self.update_zero_flag(self.register_a);
+    }
+
     fn update_zero_flag(&mut self, register: u8) {
         if register == 0 {
             self.status = self.status | 0b0000_0010;
@@ -242,6 +286,7 @@ mod test_cpu {
 
     #[test_case(0b0, 0b0, 0b0000_0010)]
     #[test_case(0b0000_0010, 0b10, 0b0)]
+    // todo rename to test_update_zero_flag()
     fn update_zero_flag_test_case(status: u8, register: u8, expected: u8) {
         let mut cpu = CPU::new();
         cpu.update_zero_flag(register);
@@ -352,7 +397,7 @@ mod test_cpu {
 
         cpu.adc(&AddressingMode::Immediate);
         assert_eq!(cpu.register_a, expected_acc);
-        assert_eq!(cpu.status & 0b0000_0001, expected_carry_flag)
+        assert_eq!(cpu.status & 0b0000_0001, expected_carry_flag) // todo: use get_carry_flag()
     }
 
     #[test]
@@ -366,6 +411,22 @@ mod test_cpu {
         cpu.and(&addressing_mode);
 
         assert_eq!(cpu.register_a, 0b1001_1001);
+    }
+
+    #[test_case(0b0000_0001, 0x5, 0x4, 0x1, 0b0000_0001)]
+    #[test_case(0b0000_0001, 0x5, 0x5, 0x0, 0b0000_0011)]
+    #[test_case(0b0000_0001, 0x0, 0x1, 0xFF, 0b1000_0000)]
+    #[test_case(0b0000_0001, 0x80, 0x1, 0x7F, 0b0100_0001)]
+    #[test_case(0b0000_0001, 0x7F, 0xFF, 0x80, 0b1100_0000)]
+    fn test_sbc(status: u8, acc: u8, nn: u8, expected_acc: u8, expected_status: u8) {
+        let mut cpu = CPU::new();
+        cpu.program_counter = 0x8000;
+        cpu.register_a = acc;
+        cpu.memory[0x8000] = nn;
+        cpu.status = status;
+        cpu.sbc(&AddressingMode::Immediate);
+        assert_eq!(cpu.register_a, expected_acc);
+        assert_eq!(cpu.status, expected_status)
     }
 
     #[test]
