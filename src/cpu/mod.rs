@@ -224,6 +224,32 @@ impl CPU {
         self.update_negative_flag(self.register_a);
     }
 
+    fn asl(&mut self, addressing_mode: &AddressingMode) {
+        let operand: &mut u8;
+        match addressing_mode {
+            AddressingMode::Accumulator => {
+                operand = &mut self.register_a;
+            }
+            _ => {
+                let index = self.get_operand_address(addressing_mode) as usize;
+                operand = &mut self.memory[index];
+            }
+        }
+        let operand_most_significant_bit = ((*operand) & 0b1000_0000) >> 7;
+        let result = *operand << 1;
+
+        *operand = result;
+
+        self.update_zero_flag(result);
+        self.update_negative_flag(result);
+
+        if (operand_most_significant_bit == 1) {
+            self.set_carry_flag();
+        } else {
+            self.clear_carry_flag();
+        }
+    }
+
     fn lda(&mut self, addressing_mode: &AddressingMode) {
         let operand = self.get_operand(addressing_mode);
         self.register_a = operand;
@@ -419,6 +445,30 @@ mod test_cpu {
         cpu.and(&addressing_mode);
 
         assert_eq!(cpu.register_a, 0b1001_1001);
+    }
+
+    #[test_case(0b0001_0010, 0b0000_0001, 0b0010_0100, 0b0000_0000)]
+    #[test_case(0b1001_0010, 0b0000_0000, 0b0010_0100, 0b0000_0001)]
+    fn test_asl_accumulator(acc: u8, status: u8, expected_acc: u8, expected_status: u8) {
+        let mut cpu = CPU::new();
+        cpu.register_a = acc;
+        cpu.status = status;
+        cpu.asl(&AddressingMode::Accumulator);
+        assert_eq!(cpu.register_a, expected_acc);
+        assert_eq!(cpu.status, expected_status);
+    }
+
+    #[test_case(0b0001_0010, 0b0000_0001, 0b0010_0100, 0b0000_0000)]
+    #[test_case(0b1001_0010, 0b0000_0000, 0b0010_0100, 0b0000_0001)]
+    fn test_asl_memory(operand: u8, status: u8, epxected_operand: u8, expected_status: u8) {
+        let mut cpu = CPU::new();
+        cpu.status = status;
+        cpu.program_counter = 0x0000;
+        cpu.mem_write(cpu.program_counter, 0x80);
+        cpu.mem_write(0x80, operand);
+        cpu.asl(&AddressingMode::ZeroPage);
+        assert_eq!(cpu.mem_read(0x80), epxected_operand);
+        assert_eq!(cpu.status, expected_status);
     }
 
     #[test_case(0b0000_0001, 0x5, 0x4, 0x1, 0b0000_0001)]

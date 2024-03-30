@@ -17,8 +17,8 @@
 - [x] Indirect Indexed
 ### Instructions
 - [X] ADC
-- [ ] AND
-- [ ] ASL
+- [X] AND
+- [X] ASL
 - [ ] BCC
 - [ ] BCS
 - [ ] BEQ
