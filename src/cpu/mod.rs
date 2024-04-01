@@ -65,6 +65,18 @@ impl CPU {
                 self.and(&instruction.addressing_mode);
                 None
             }
+            "ASL" => {
+                self.asl(&instruction.addressing_mode);
+                None
+            }
+            "BCC" => {
+                self.bcc();
+                None
+            }
+            "BCS" => {
+                self.bcs();
+                None
+            }
             "BRK" => Some(0),
             "LDA" => {
                 self.lda(&instruction.addressing_mode);
@@ -129,6 +141,10 @@ impl CPU {
 
     fn carry_flag_is_clear(&self) -> bool {
         return self.status & 0b0000_0001 == 0;
+    }
+
+    fn carry_flag_is_set(&self) -> bool {
+        return self.status & 0b0000_0001 == 1;
     }
 
     fn set_overflow_flag(&mut self) {
@@ -256,6 +272,17 @@ impl CPU {
 
     fn bcc(&mut self) {
         if self.carry_flag_is_clear() {
+            if self.mem_read(self.program_counter) > 0x7F {
+                let distance = 0xFF - self.mem_read(self.program_counter) + 1;
+                self.program_counter -= distance as u16;
+            } else {
+                self.program_counter += self.mem_read(self.program_counter) as u16 - 1;
+            }
+        }
+    }
+
+    fn bcs(&mut self) {
+        if self.carry_flag_is_set() {
             if self.mem_read(self.program_counter) > 0x7F {
                 let distance = 0xFF - self.mem_read(self.program_counter) + 1;
                 self.program_counter -= distance as u16;
@@ -495,6 +522,18 @@ mod test_cpu {
         cpu.program_counter = program_counter;
         cpu.memory[cpu.program_counter as usize] = distance;
         cpu.bcc();
+        assert_eq!(cpu.program_counter, expected_program_counter);
+    }
+
+    #[test_case(0b0000_0000, 0x8080, 0x8080, 0x06)]
+    #[test_case(0b0000_0001, 0xE004, 0xE009, 0x06)]
+    #[test_case(0b0000_0001, 0xE009, 0xE003, 0xFA)]
+    fn test_bcs(status: u8, program_counter: u16, expected_program_counter: u16, distance: u8) {
+        let mut cpu = CPU::new();
+        cpu.status = status;
+        cpu.program_counter = program_counter;
+        cpu.memory[cpu.program_counter as usize] = distance;
+        cpu.bcs();
         assert_eq!(cpu.program_counter, expected_program_counter);
     }
 

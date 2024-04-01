@@ -20,7 +20,7 @@
 - [X] AND
 - [X] ASL
 - [X] BCC
-- [ ] BCS
+- [X] BCS
 - [ ] BEQ
 - [ ] BIT
 - [ ] BMI
