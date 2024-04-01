@@ -75,6 +75,10 @@ impl CPU {
                 self.bcs();
                 None
             }
+            "BEQ" => {
+                self.beq();
+                None
+            }
             "BRK" => Some(0),
             "LDA" => {
                 self.lda(&instruction.addressing_mode);
@@ -151,6 +155,10 @@ impl CPU {
 
     fn clear_overflow_flag(&mut self) {
         self.status = self.status & 0b1011_1111;
+    }
+
+    fn zero_flag_is_set(&self) -> bool {
+        return self.status & 0b0000_0010 == 0b10;
     }
 
     fn get_operand_address(&mut self, addressing_mode: &AddressingMode) -> u16 {
@@ -277,6 +285,18 @@ impl CPU {
 
     fn bcs(&mut self) {
         if self.carry_flag_is_set() {
+            if self.mem_read(self.program_counter) > 0x7F {
+                let distance = 0xFF - self.mem_read(self.program_counter) + 1;
+                self.program_counter -= distance as u16;
+            } else {
+                self.program_counter += self.mem_read(self.program_counter) as u16 - 1;
+            }
+        }
+    }
+
+    fn beq(&mut self) {
+        if self.zero_flag_is_set() {
+            println!("Branching...");
             if self.mem_read(self.program_counter) > 0x7F {
                 let distance = 0xFF - self.mem_read(self.program_counter) + 1;
                 self.program_counter -= distance as u16;
@@ -527,6 +547,18 @@ mod test_cpu {
         cpu.program_counter = program_counter;
         cpu.memory[cpu.program_counter as usize] = distance;
         cpu.bcs();
+        assert_eq!(cpu.program_counter, expected_program_counter);
+    }
+
+    #[test_case(0b0000_0000, 0x8080, 0x8080, 0x06)]
+    #[test_case(0b0000_0010, 0xE004, 0xE009, 0x06)]
+    #[test_case(0b0000_0010, 0xE009, 0xE003, 0xFA)]
+    fn test_beq(status: u8, program_counter: u16, expected_program_counter: u16, distance: u8) {
+        let mut cpu = CPU::new();
+        cpu.status = status;
+        cpu.program_counter = program_counter;
+        cpu.memory[cpu.program_counter as usize] = distance;
+        cpu.beq();
         assert_eq!(cpu.program_counter, expected_program_counter);
     }
 

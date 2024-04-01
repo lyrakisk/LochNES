@@ -21,7 +21,7 @@
 - [X] ASL
 - [X] BCC
 - [X] BCS
-- [ ] BEQ
+- [X] BEQ
 - [ ] BIT
 - [ ] BMI
 - [ ] BNE
