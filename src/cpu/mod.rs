@@ -223,6 +223,15 @@ impl CPU {
         }
     }
 
+    fn branch_off_program_counter(&self, program_counter: u16, distance: u16) -> u16 {
+        if distance > 0x7F {
+            let distance = 0xFF - distance + 1;
+            return program_counter - distance;
+        } else {
+            return program_counter + distance - 1;
+        }
+    }
+
     fn adc(&mut self, addressing_mode: &AddressingMode) {
         let operand = self.get_operand(addressing_mode);
         let carry = self.get_carry_flag();
@@ -274,35 +283,25 @@ impl CPU {
 
     fn bcc(&mut self) {
         if self.carry_flag_is_clear() {
-            if self.mem_read(self.program_counter) > 0x7F {
-                let distance = 0xFF - self.mem_read(self.program_counter) + 1;
-                self.program_counter -= distance as u16;
-            } else {
-                self.program_counter += self.mem_read(self.program_counter) as u16 - 1;
-            }
+            let distance = self.mem_read(self.program_counter);
+            self.program_counter =
+                self.branch_off_program_counter(self.program_counter, distance as u16);
         }
     }
 
     fn bcs(&mut self) {
         if self.carry_flag_is_set() {
-            if self.mem_read(self.program_counter) > 0x7F {
-                let distance = 0xFF - self.mem_read(self.program_counter) + 1;
-                self.program_counter -= distance as u16;
-            } else {
-                self.program_counter += self.mem_read(self.program_counter) as u16 - 1;
-            }
+            let distance = self.mem_read(self.program_counter);
+            self.program_counter =
+                self.branch_off_program_counter(self.program_counter, distance as u16);
         }
     }
 
     fn beq(&mut self) {
         if self.zero_flag_is_set() {
-            println!("Branching...");
-            if self.mem_read(self.program_counter) > 0x7F {
-                let distance = 0xFF - self.mem_read(self.program_counter) + 1;
-                self.program_counter -= distance as u16;
-            } else {
-                self.program_counter += self.mem_read(self.program_counter) as u16 - 1;
-            }
+            let distance = self.mem_read(self.program_counter);
+            self.program_counter =
+                self.branch_off_program_counter(self.program_counter, distance as u16);
         }
     }
 
