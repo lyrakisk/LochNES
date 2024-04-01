@@ -1,6 +1,6 @@
 mod instructions;
 
-use std::ops::{Add, Shl};
+use std::ops::{Add, Shl, Sub};
 
 use crate::cpu::instructions::*;
 
@@ -127,6 +127,10 @@ impl CPU {
         self.status = self.status & 0b1111_1110;
     }
 
+    fn carry_flag_is_clear(&self) -> bool {
+        return self.status & 0b0000_0001 == 0;
+    }
+
     fn set_overflow_flag(&mut self) {
         self.status = self.status | 0b0100_0000;
     }
@@ -141,12 +145,6 @@ impl CPU {
 
     fn get_operand_address(&mut self, addressing_mode: &AddressingMode) -> u16 {
         match addressing_mode {
-            AddressingMode::Implicit => {
-                panic!("Cannot get operand address when the Addressing Mode is Implicit");
-            }
-            AddressingMode::Accumulator => {
-                panic!("Cannot get operand address when the Addressing Mode is Accumulator");
-            }
             AddressingMode::Immediate => self.program_counter,
             AddressingMode::ZeroPage => self.mem_read(self.program_counter) as u16,
             AddressingMode::ZeroPage_X => self
@@ -187,6 +185,12 @@ impl CPU {
                 let indirect_address = self.mem_read_u16(self.program_counter);
                 self.mem_read_u16(indirect_address)
                     .wrapping_add(self.register_y as u16)
+            }
+            _ => {
+                panic!(
+                    "Cannot get operand address when the Addressing Mode is {:?}",
+                    addressing_mode
+                );
             }
         }
     }
@@ -247,6 +251,17 @@ impl CPU {
             self.set_carry_flag();
         } else {
             self.clear_carry_flag();
+        }
+    }
+
+    fn bcc(&mut self) {
+        if self.carry_flag_is_clear() {
+            if self.mem_read(self.program_counter) > 0x7F {
+                let distance = 0xFF - self.mem_read(self.program_counter) + 1;
+                self.program_counter -= distance as u16;
+            } else {
+                self.program_counter += self.mem_read(self.program_counter) as u16 - 1;
+            }
         }
     }
 
@@ -469,6 +484,18 @@ mod test_cpu {
         cpu.asl(&AddressingMode::ZeroPage);
         assert_eq!(cpu.mem_read(0x80), epxected_operand);
         assert_eq!(cpu.status, expected_status);
+    }
+
+    #[test_case(0b0000_0001, 0x8080, 0x8080, 0x06)]
+    #[test_case(0b0000_0000, 0xE004, 0xE009, 0x06)]
+    #[test_case(0b0000_0000, 0xE009, 0xE003, 0xFA)]
+    fn test_bcc(status: u8, program_counter: u16, expected_program_counter: u16, distance: u8) {
+        let mut cpu = CPU::new();
+        cpu.status = status;
+        cpu.program_counter = program_counter;
+        cpu.memory[cpu.program_counter as usize] = distance;
+        cpu.bcc();
+        assert_eq!(cpu.program_counter, expected_program_counter);
     }
 
     #[test_case(0b0000_0001, 0x5, 0x4, 0x1, 0b0000_0001)]

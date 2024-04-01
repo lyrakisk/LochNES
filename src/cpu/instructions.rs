@@ -6,6 +6,7 @@ use std::collections::HashMap;
 pub enum AddressingMode {
     Implicit,
     Accumulator,
+    Relative,
     Immediate,
     ZeroPage,
     ZeroPage_X,
@@ -62,6 +63,7 @@ pub static INSTRUCTIONS: Lazy<HashMap<u8, Instruction>> = Lazy::new(|| {
         Instruction {opcode: 0x16, name: "ASL", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X},
         Instruction {opcode: 0x0E, name: "ASL", bytes: 3, addressing_mode: AddressingMode::Absolute},
         Instruction {opcode: 0x1E, name: "ASL", bytes: 3, addressing_mode: AddressingMode::Absolute_X},
+        Instruction {opcode: 0x90, name: "BCC", bytes: 2, addressing_mode: AddressingMode::Relative},
         Instruction {opcode: 0x00, name: "BRK", bytes: 1, addressing_mode: AddressingMode::Implicit},
         Instruction {opcode: 0xA9, name: "LDA", bytes: 2, addressing_mode: AddressingMode::Immediate},
         Instruction {opcode: 0xA5, name: "LDA", bytes: 2, addressing_mode: AddressingMode::ZeroPage},
