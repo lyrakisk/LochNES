@@ -1,7 +1,5 @@
 mod instructions;
 
-use std::ops::{Add, Shl, Sub};
-
 use crate::cpu::instructions::*;
 
 type ExitCode = u8;
@@ -155,10 +153,6 @@ impl CPU {
         self.status = self.status & 0b1011_1111;
     }
 
-    fn get_overflow_flag(&mut self) {
-        todo!();
-    }
-
     fn get_operand_address(&mut self, addressing_mode: &AddressingMode) -> u16 {
         match addressing_mode {
             AddressingMode::Immediate => self.program_counter,
@@ -228,7 +222,7 @@ impl CPU {
             self.register_a.overflowing_add(operand);
         let (final_sum, overflow_occured_on_second_addition) = temp_sum.overflowing_add(carry);
         self.register_a = final_sum;
-        if (overflow_occured_on_first_addition || overflow_occured_on_second_addition) {
+        if overflow_occured_on_first_addition || overflow_occured_on_second_addition {
             self.set_carry_flag();
         } else {
             self.clear_carry_flag()
@@ -263,7 +257,7 @@ impl CPU {
         self.update_zero_flag(result);
         self.update_negative_flag(result);
 
-        if (operand_most_significant_bit == 1) {
+        if operand_most_significant_bit == 1 {
             self.set_carry_flag();
         } else {
             self.clear_carry_flag();
@@ -320,15 +314,15 @@ impl CPU {
 
         let result = minuend.wrapping_sub(subtrahend).wrapping_sub(carry);
 
-        if ((minuend > 0x7F && subtrahend < 0x7F && result < 0x80)
-            || (minuend < 0x80 && subtrahend > 0x7F && result > 0x7F))
+        if (minuend > 0x7F && subtrahend < 0x7F && result < 0x80)
+            || (minuend < 0x80 && subtrahend > 0x7F && result > 0x7F)
         {
             self.set_overflow_flag();
         } else {
             self.clear_overflow_flag();
         }
 
-        if (result > 0x7F) {
+        if result > 0x7F {
             self.clear_carry_flag();
         } else {
             self.set_carry_flag();
@@ -360,10 +354,9 @@ mod test_cpu {
     use super::*;
     use test_case::test_case;
 
-    #[test_case(0b0, 0b0, 0b0000_0010)]
-    #[test_case(0b0000_0010, 0b10, 0b0)]
-    // todo rename to test_update_zero_flag()
-    fn update_zero_flag_test_case(status: u8, register: u8, expected: u8) {
+    #[test_case(0b0, 0b0000_0010)]
+    #[test_case(0b10, 0b0)]
+    fn test_update_zero_flag(register: u8, expected: u8) {
         let mut cpu = CPU::new();
         cpu.update_zero_flag(register);
         assert_eq!(cpu.status, expected);
