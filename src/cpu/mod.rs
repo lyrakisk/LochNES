@@ -4,6 +4,16 @@ use crate::cpu::instructions::*;
 
 type ExitCode = u8;
 
+const STATUS_FLAG_MASK_CARRY: u8 = 0b00000001;
+const STATUS_FLAG_MASK_ZERO: u8 = 0b00000010;
+const STATUS_FLAG_MASK_OVERFLOW: u8 = 0b01000000;
+const STATUS_FLAG_MASK_NEGATIVE: u8 = 0b10000000;
+
+enum FlagStates {
+    CLEAR = 0,
+    SET = 1,
+}
+
 #[derive(Debug)]
 pub struct CPU {
     pub register_a: u8,
@@ -129,32 +139,20 @@ impl CPU {
         println!("Writing {:#01x} to address {:#01x}", bytes[1], index + 1);
     }
 
-    fn set_carry_flag(&mut self) {
-        self.status = self.status | 0b0000_0001;
+    fn get_flag_state(&self, mask: u8) -> FlagStates {
+        if self.status & mask == 0x0 {
+            FlagStates::CLEAR
+        } else {
+            FlagStates::SET
+        }
     }
 
-    fn get_carry_flag(&self) -> u8 {
-        self.status & 0b0000_0001
+    fn set_flag(&mut self, mask: u8) {
+        self.status = self.status | mask;
     }
 
-    fn clear_carry_flag(&mut self) {
-        self.status = self.status & 0b1111_1110;
-    }
-
-    fn carry_flag_is_clear(&self) -> bool {
-        return self.status & 0b0000_0001 == 0;
-    }
-
-    fn carry_flag_is_set(&self) -> bool {
-        return self.status & 0b0000_0001 == 1;
-    }
-
-    fn set_overflow_flag(&mut self) {
-        self.status = self.status | 0b0100_0000;
-    }
-
-    fn clear_overflow_flag(&mut self) {
-        self.status = self.status & 0b1011_1111;
+    fn clear_flag(&mut self, mask: u8) {
+        self.status = self.status & (!mask);
     }
 
     fn zero_flag_is_set(&self) -> bool {
@@ -234,15 +232,16 @@ impl CPU {
 
     fn adc(&mut self, addressing_mode: &AddressingMode) {
         let operand = self.get_operand(addressing_mode);
-        let carry = self.get_carry_flag();
+        let carry = self.get_flag_state(STATUS_FLAG_MASK_CARRY);
         let (temp_sum, overflow_occured_on_first_addition) =
             self.register_a.overflowing_add(operand);
-        let (final_sum, overflow_occured_on_second_addition) = temp_sum.overflowing_add(carry);
+        let (final_sum, overflow_occured_on_second_addition) =
+            temp_sum.overflowing_add(carry as u8);
         self.register_a = final_sum;
         if overflow_occured_on_first_addition || overflow_occured_on_second_addition {
-            self.set_carry_flag();
+            self.set_flag(STATUS_FLAG_MASK_CARRY);
         } else {
-            self.clear_carry_flag()
+            self.clear_flag(STATUS_FLAG_MASK_CARRY)
         };
         self.update_negative_flag(self.register_a);
         self.update_zero_flag(self.register_a);
@@ -275,33 +274,48 @@ impl CPU {
         self.update_negative_flag(result);
 
         if operand_most_significant_bit == 1 {
-            self.set_carry_flag();
+            self.set_flag(STATUS_FLAG_MASK_CARRY);
         } else {
-            self.clear_carry_flag();
+            self.clear_flag(STATUS_FLAG_MASK_CARRY);
         }
     }
 
     fn bcc(&mut self) {
-        if self.carry_flag_is_clear() {
-            let distance = self.mem_read(self.program_counter);
-            self.program_counter =
-                self.branch_off_program_counter(self.program_counter, distance as u16);
+        match self.get_flag_state(STATUS_FLAG_MASK_CARRY) {
+            FlagStates::CLEAR => {
+                let distance = self.mem_read(self.program_counter);
+                self.program_counter =
+                    self.branch_off_program_counter(self.program_counter, distance as u16);
+            }
+            FlagStates::SET => {
+                return;
+            }
         }
     }
 
     fn bcs(&mut self) {
-        if self.carry_flag_is_set() {
-            let distance = self.mem_read(self.program_counter);
-            self.program_counter =
-                self.branch_off_program_counter(self.program_counter, distance as u16);
+        match self.get_flag_state(STATUS_FLAG_MASK_CARRY) {
+            FlagStates::SET => {
+                let distance = self.mem_read(self.program_counter);
+                self.program_counter =
+                    self.branch_off_program_counter(self.program_counter, distance as u16);
+            }
+            FlagStates::CLEAR => {
+                return;
+            }
         }
     }
 
     fn beq(&mut self) {
-        if self.zero_flag_is_set() {
-            let distance = self.mem_read(self.program_counter);
-            self.program_counter =
-                self.branch_off_program_counter(self.program_counter, distance as u16);
+        match self.get_flag_state(STATUS_FLAG_MASK_ZERO) {
+            FlagStates::SET => {
+                let distance = self.mem_read(self.program_counter);
+                self.program_counter =
+                    self.branch_off_program_counter(self.program_counter, distance as u16);
+            }
+            FlagStates::CLEAR => {
+                return;
+            }
         }
     }
 
@@ -329,22 +343,22 @@ impl CPU {
         let minuend = self.register_a;
         let subtrahend = self.get_operand(addressing_mode);
 
-        let carry = self.get_carry_flag() ^ 0b0000_0001;
+        let carry = (self.get_flag_state(STATUS_FLAG_MASK_CARRY) as u8) ^ 0b0000_0001;
 
         let result = minuend.wrapping_sub(subtrahend).wrapping_sub(carry);
 
         if (minuend > 0x7F && subtrahend < 0x7F && result < 0x80)
             || (minuend < 0x80 && subtrahend > 0x7F && result > 0x7F)
         {
-            self.set_overflow_flag();
+            self.set_flag(STATUS_FLAG_MASK_OVERFLOW);
         } else {
-            self.clear_overflow_flag();
+            self.clear_flag(STATUS_FLAG_MASK_OVERFLOW);
         }
 
         if result > 0x7F {
-            self.clear_carry_flag();
+            self.clear_flag(STATUS_FLAG_MASK_CARRY);
         } else {
-            self.set_carry_flag();
+            self.set_flag(STATUS_FLAG_MASK_CARRY);
         }
         self.register_a = result;
         self.update_negative_flag(self.register_a);
