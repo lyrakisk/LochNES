@@ -89,6 +89,10 @@ impl CPU {
                 self.beq();
                 None
             }
+            "BMI" => {
+                self.bmi();
+                None
+            }
             "BRK" => Some(0),
             "LDA" => {
                 self.lda(&instruction.addressing_mode);
@@ -304,6 +308,19 @@ impl CPU {
 
     fn beq(&mut self) {
         match self.get_flag_state(STATUS_FLAG_MASK_ZERO) {
+            FlagStates::SET => {
+                let distance = self.mem_read(self.program_counter);
+                self.program_counter =
+                    self.branch_off_program_counter(self.program_counter, distance as u16);
+            }
+            FlagStates::CLEAR => {
+                return;
+            }
+        }
+    }
+
+    fn bmi(&mut self) {
+        match self.get_flag_state(STATUS_FLAG_MASK_NEGATIVE) {
             FlagStates::SET => {
                 let distance = self.mem_read(self.program_counter);
                 self.program_counter =
@@ -568,6 +585,18 @@ mod test_cpu {
         cpu.program_counter = program_counter;
         cpu.memory[cpu.program_counter as usize] = distance;
         cpu.beq();
+        assert_eq!(cpu.program_counter, expected_program_counter);
+    }
+
+    #[test_case(0b0000_0000, 0x8080, 0x8080, 0x06)]
+    #[test_case(0b1000_0000, 0xE004, 0xE009, 0x06)]
+    #[test_case(0b1000_0000, 0xE009, 0xE003, 0xFA)]
+    fn test_bmi(status: u8, program_counter: u16, expected_program_counter: u16, distance: u8) {
+        let mut cpu = CPU::new();
+        cpu.status = status;
+        cpu.program_counter = program_counter;
+        cpu.memory[cpu.program_counter as usize] = distance;
+        cpu.bmi();
         assert_eq!(cpu.program_counter, expected_program_counter);
     }
 
