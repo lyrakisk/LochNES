@@ -155,10 +155,6 @@ impl CPU {
         self.status = self.status & (!mask);
     }
 
-    fn zero_flag_is_set(&self) -> bool {
-        return self.status & 0b0000_0010 == 0b10;
-    }
-
     fn get_operand_address(&mut self, addressing_mode: &AddressingMode) -> u16 {
         match addressing_mode {
             AddressingMode::Immediate => self.program_counter,
@@ -367,17 +363,17 @@ impl CPU {
 
     fn update_zero_flag(&mut self, register: u8) {
         if register == 0 {
-            self.status = self.status | 0b0000_0010;
+            self.set_flag(STATUS_FLAG_MASK_ZERO);
         } else {
-            self.status = self.status & 0b1111_1101;
+            self.clear_flag(STATUS_FLAG_MASK_ZERO);
         }
     }
 
     fn update_negative_flag(&mut self, register: u8) {
         if register & 0b1000_0000 != 0 {
-            self.status = self.status | 0b1000_0000;
+            self.set_flag(STATUS_FLAG_MASK_NEGATIVE);
         } else {
-            self.status = self.status & 0b0111_1111;
+            self.clear_flag(STATUS_FLAG_MASK_NEGATIVE);
         }
     }
 }
