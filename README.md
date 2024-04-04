@@ -26,7 +26,7 @@ A (soon to be) fully-featured NES emulator written in Rust.
 - [ ] BIT
 - [X] BMI
 - [X] BNE
-- [ ] BPL
+- [X] BPL
 - [ ] BRK
 - [ ] BVC
 - [ ] BVS
