@@ -1,4 +1,5 @@
-# nes_emulator
+# LochNES
+A (soon to be) fully-featured NES emulator written in Rust. 
 
 ## Roadmap
 
