@@ -113,6 +113,10 @@ impl CPU {
                 self.clc();
                 None
             }
+            "CLV" => {
+                self.clv();
+                None
+            }
             "BRK" => Some(0),
             "LDA" => {
                 self.lda(&instruction.addressing_mode);
@@ -406,6 +410,10 @@ impl CPU {
 
     fn clc(&mut self) {
         self.clear_flag(STATUS_FLAG_MASK_CARRY);
+    }
+
+    fn clv(&mut self) {
+        self.clear_flag(STATUS_FLAG_MASK_OVERFLOW);
     }
 
     fn lda(&mut self, addressing_mode: &AddressingMode) {
@@ -720,6 +728,17 @@ mod test_cpu {
         let mut cpu = CPU::new();
         cpu.status = status;
         cpu.clc();
+        assert_eq!(cpu.status, expected_status)
+    }
+
+    #[test_case(0b0100_0000, 0b0000_0000)]
+    #[test_case(0b0000_0000, 0b0000_0000)]
+    #[test_case(0b0100_0001, 0b0000_0001)]
+    #[test_case(0b0000_0001, 0b0000_0001)]
+    fn test_clv(status: u8, expected_status: u8) {
+        let mut cpu = CPU::new();
+        cpu.status = status;
+        cpu.clv();
         assert_eq!(cpu.status, expected_status)
     }
 
