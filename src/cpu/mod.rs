@@ -109,6 +109,10 @@ impl CPU {
                 self.bvs();
                 None
             }
+            "CLC" => {
+                self.clc();
+                None
+            }
             "BRK" => Some(0),
             "LDA" => {
                 self.lda(&instruction.addressing_mode);
@@ -398,6 +402,10 @@ impl CPU {
                 return;
             }
         }
+    }
+
+    fn clc(&mut self) {
+        self.clear_flag(STATUS_FLAG_MASK_CARRY);
     }
 
     fn lda(&mut self, addressing_mode: &AddressingMode) {
@@ -702,6 +710,17 @@ mod test_cpu {
         cpu.memory[cpu.program_counter as usize] = distance;
         cpu.bvs();
         assert_eq!(cpu.program_counter, expected_program_counter);
+    }
+
+    #[test_case(0b0000_0001, 0b0000_0000)]
+    #[test_case(0b0000_0000, 0b0000_0000)]
+    #[test_case(0b0100_0001, 0b0100_0000)]
+    #[test_case(0b0100_0000, 0b0100_0000)]
+    fn test_clc(status: u8, expected_status: u8) {
+        let mut cpu = CPU::new();
+        cpu.status = status;
+        cpu.clc();
+        assert_eq!(cpu.status, expected_status)
     }
 
     #[test_case(0b0000_0001, 0x5, 0x4, 0x1, 0b0000_0001)]

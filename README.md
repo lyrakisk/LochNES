@@ -30,7 +30,7 @@ A (soon to be) fully-featured NES emulator written in Rust.
 - [ ] BRK
 - [X] BVC
 - [X] BVS
-- [ ] CLC
+- [X] CLC
 - [ ] CLD
 - [ ] CLI
 - [ ] CLV
