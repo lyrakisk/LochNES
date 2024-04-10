@@ -1,5 +1,5 @@
 use once_cell::sync::Lazy;
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Add};
 
 #[derive(Debug)]
 #[allow(non_camel_case_types)]
@@ -14,7 +14,7 @@ pub enum AddressingMode {
     Absolute,
     Absolute_X,
     Absolute_Y,
-    Indirect,
+    Indirect, // todo: cleanup
     Indexed_Idirect_X,
     Indexed_Idirect_Y,
     Indirect_indexed_X,
@@ -74,6 +74,14 @@ pub static INSTRUCTIONS: Lazy<HashMap<u8, Instruction>> = Lazy::new(|| {
         Instruction {opcode: 0x70, name: "BVS", bytes: 2, addressing_mode: AddressingMode::Relative},
         Instruction {opcode: 0x18, name: "CLC", bytes: 1, addressing_mode: AddressingMode::Implicit},
         Instruction {opcode: 0xB8, name: "CLV", bytes: 1, addressing_mode: AddressingMode::Implicit},
+        Instruction {opcode: 0xC9, name: "CMP", bytes: 2, addressing_mode: AddressingMode::Immediate},
+        Instruction {opcode: 0xC5, name: "CMP", bytes: 2, addressing_mode: AddressingMode::ZeroPage},
+        Instruction {opcode: 0xD5, name: "CMP", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X},
+        Instruction {opcode: 0xCD, name: "CMP", bytes: 3, addressing_mode: AddressingMode::Absolute},
+        Instruction {opcode: 0xDD, name: "CMP", bytes: 3, addressing_mode: AddressingMode::Absolute_X},
+        Instruction {opcode: 0xD9, name: "CMP", bytes: 3, addressing_mode: AddressingMode::Absolute_Y},
+        Instruction {opcode: 0xC1, name: "CMP", bytes: 2, addressing_mode: AddressingMode::Indexed_Idirect_X},
+        Instruction {opcode: 0xD1, name: "CMP", bytes: 2, addressing_mode: AddressingMode::Indirect_indexed_Y},
         Instruction {opcode: 0xA9, name: "LDA", bytes: 2, addressing_mode: AddressingMode::Immediate},
         Instruction {opcode: 0xA5, name: "LDA", bytes: 2, addressing_mode: AddressingMode::ZeroPage},
         Instruction {opcode: 0xB5, name: "LDA", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X},

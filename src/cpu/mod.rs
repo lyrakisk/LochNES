@@ -9,6 +9,7 @@ const STATUS_FLAG_MASK_ZERO: u8 = 0b00000010;
 const STATUS_FLAG_MASK_OVERFLOW: u8 = 0b01000000;
 const STATUS_FLAG_MASK_NEGATIVE: u8 = 0b10000000;
 
+#[derive(Debug, PartialEq)]
 enum FlagStates {
     CLEAR = 0,
     SET = 1,
@@ -115,6 +116,10 @@ impl CPU {
             }
             "CLV" => {
                 self.clv();
+                None
+            }
+            "CMP" => {
+                self.cmp(&instruction.addressing_mode);
                 None
             }
             "BRK" => Some(0),
@@ -416,6 +421,21 @@ impl CPU {
         self.clear_flag(STATUS_FLAG_MASK_OVERFLOW);
     }
 
+    fn cmp(&mut self, addressing_mode: &AddressingMode) {
+        let (result, overflow_occured) = self
+            .register_a
+            .overflowing_sub(self.get_operand(&addressing_mode));
+
+        if overflow_occured {
+            self.clear_flag(STATUS_FLAG_MASK_CARRY);
+        } else {
+            self.set_flag(STATUS_FLAG_MASK_CARRY);
+        }
+
+        self.update_zero_flag(result);
+        self.update_negative_flag(result);
+    }
+
     fn lda(&mut self, addressing_mode: &AddressingMode) {
         let operand = self.get_operand(addressing_mode);
         self.register_a = operand;
@@ -481,6 +501,8 @@ impl CPU {
 
 #[cfg(test)]
 mod test_cpu {
+    use std::ops::Add;
+
     use super::*;
     use test_case::test_case;
 
@@ -740,6 +762,45 @@ mod test_cpu {
         cpu.status = status;
         cpu.clv();
         assert_eq!(cpu.status, expected_status)
+    }
+
+    #[test_case(0x15, 0x10, FlagStates::SET, FlagStates::CLEAR, FlagStates::CLEAR)]
+    #[test_case(0x15, 0x15, FlagStates::SET, FlagStates::SET, FlagStates::CLEAR)]
+    #[test_case(0x15, 0x35, FlagStates::CLEAR, FlagStates::CLEAR, FlagStates::SET)]
+    #[test_case(0xFA, 0x00, FlagStates::SET, FlagStates::CLEAR, FlagStates::SET)]
+    #[test_case(0xFA, 0xFA, FlagStates::SET, FlagStates::SET, FlagStates::CLEAR)]
+    #[test_case(0xFA, 0xFB, FlagStates::CLEAR, FlagStates::CLEAR, FlagStates::SET)]
+    fn test_cmp(
+        accumulator: u8,
+        memory_value: u8,
+        expected_carry_flag_state: FlagStates,
+        expected_zero_flag_state: FlagStates,
+        expected_negative_flag_state: FlagStates,
+    ) {
+        let mut cpu = CPU::new();
+        cpu.register_a = accumulator;
+        cpu.program_counter = 0x8001;
+        cpu.mem_write(0x8001, memory_value);
+
+        cpu.cmp(&AddressingMode::Immediate);
+        let carry_flag_state = cpu.get_flag_state(STATUS_FLAG_MASK_CARRY);
+        let zero_flag_state = cpu.get_flag_state(STATUS_FLAG_MASK_ZERO);
+        let negative_flag_state = cpu.get_flag_state(STATUS_FLAG_MASK_NEGATIVE);
+        assert_eq!(
+            carry_flag_state, expected_carry_flag_state,
+            "Expected carry flag {:?}, but got {:?}",
+            expected_carry_flag_state, carry_flag_state
+        );
+        assert_eq!(
+            zero_flag_state, expected_zero_flag_state,
+            "Expected zero flag {:?}, but got {:?}",
+            expected_zero_flag_state, zero_flag_state
+        );
+        assert_eq!(
+            negative_flag_state, expected_negative_flag_state,
+            "Expected negative flag {:?}, but got {:?}",
+            expected_negative_flag_state, negative_flag_state
+        );
     }
 
     #[test_case(0b0000_0001, 0x5, 0x4, 0x1, 0b0000_0001)]
