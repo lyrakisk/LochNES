@@ -15,8 +15,12 @@ enum FlagStates {
     SET = 1,
 }
 
+enum InstructionExecutionError {
+    INTERRUPT_HANDLING_NOT_IMPLEMENTED,
+}
+
 #[derive(Debug)]
-pub struct CPU {
+struct CPU {
     pub register_a: u8,
     pub register_x: u8,
     pub register_y: u8,
@@ -57,87 +61,91 @@ impl CPU {
 
             let instruction = &INSTRUCTIONS[&opcode];
 
-            if let Some(_) = self.execute(&instruction) {
-                return;
+            match self.execute(&instruction) {
+                Ok(()) => (),
+                Err(InstructionExecutionError::INTERRUPT_HANDLING_NOT_IMPLEMENTED) => {
+                    return;
+                }
             }
+
             self.program_counter += (instruction.bytes as u16) - 1;
         }
     }
 
-    fn execute(&mut self, instruction: &Instruction) -> Option<ExitCode> {
+    fn execute(&mut self, instruction: &Instruction) -> Result<(), InstructionExecutionError> {
         match instruction.name {
             "ADC" => {
                 self.adc(&instruction.addressing_mode);
-                None
+                Ok(())
             }
             "AND" => {
                 self.and(&instruction.addressing_mode);
-                None
+                Ok(())
             }
             "ASL" => {
                 self.asl(&instruction.addressing_mode);
-                None
+                Ok(())
             }
             "BCC" => {
                 self.bcc();
-                None
+                Ok(())
             }
             "BCS" => {
                 self.bcs();
-                None
+                Ok(())
             }
             "BEQ" => {
                 self.beq();
-                None
+                Ok(())
             }
             "BMI" => {
                 self.bmi();
-                None
+                Ok(())
             }
             "BNE" => {
                 self.bne();
-                None
+                Ok(())
             }
             "BPL" => {
                 self.bpl();
-                None
+                Ok(())
             }
             "BVC" => {
                 self.bvc();
-                None
+                Ok(())
             }
             "BVS" => {
                 self.bvs();
-                None
+                Ok(())
             }
             "CLC" => {
                 self.clc();
-                None
+                Ok(())
             }
             "CLV" => {
                 self.clv();
-                None
+                Ok(())
             }
             "CMP" => {
                 self.cmp(&instruction.addressing_mode);
-                None
+                Ok(())
             }
-            "BRK" => Some(0),
+            "BRK" => Err(InstructionExecutionError::INTERRUPT_HANDLING_NOT_IMPLEMENTED),
             "LDA" => {
                 self.lda(&instruction.addressing_mode);
-                None
+                Ok(())
             }
             "TAX" => {
                 self.tax();
-                None
+                Ok(())
             }
             "INX" => {
                 self.inx();
-                None
+                Ok(())
             }
             "SBC" => {
                 self.sbc(&instruction.addressing_mode);
-                None
+                Ok(())
             }
             _ => {
                 todo!();
@@ -513,6 +521,8 @@ mod test_cpu {
         cpu.update_zero_flag(register);
         assert_eq!(cpu.status, expected);
     }
+
+    // TODO: test that illegal opcodes are ignored
 
     #[test]
     fn lda_correctly_sets_negative_flag() {
@@ -947,5 +957,12 @@ mod test_cpu {
         cpu.register_a = 0x80;
         let result = cpu.get_operand(&AddressingMode::Accumulator);
         assert_eq!(result, 0x80);
+    }
+
+    #[test]
+    fn run_test_from_json() {
+        // init cpu
+        // update state
+        // while next instruction, execute()
     }
 }
