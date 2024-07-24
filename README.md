@@ -70,7 +70,7 @@ A (soon to be) fully-featured NES emulator written in Rust.
 - [ ] TAX
 - [ ] TAY
 - [ ] TSX
-- [ ] TXA
+- [X] TXA
 - [ ] TXS
 - [ ] TYA
 

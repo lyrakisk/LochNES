@@ -27,6 +27,7 @@ pub struct CPU {
     pub status: u8,
     pub program_counter: u16,
     memory: [u8; 0xFFFF],
+    // todo: add stack pointer
 }
 
 impl CPU {
@@ -53,6 +54,10 @@ impl CPU {
             let opcode = self.memory[self.program_counter as usize];
             self.program_counter += 1;
 
+            if !INSTRUCTIONS.contains_key(&opcode) {
+                return;
+            }
+
             let instruction = &INSTRUCTIONS[&opcode];
 
             match self.execute(&instruction) {
@@ -64,6 +69,10 @@ impl CPU {
 
             self.program_counter += (instruction.bytes as u16) - 1;
         }
+    }
+
+    fn decode(opcode: u8) -> Option<Instruction> {
+        todo!();
     }
 
     fn execute(&mut self, instruction: &Instruction) -> Result<(), InstructionExecutionError> {
@@ -139,6 +148,10 @@ impl CPU {
             }
             "SBC" => {
                 self.sbc(&instruction.addressing_mode);
+                Ok(())
+            }
+            "TXA" => {
+                self.txa();
                 Ok(())
             }
             _ => {
@@ -264,6 +277,8 @@ impl CPU {
 
     fn adc(&mut self, addressing_mode: &AddressingMode) {
         let operand = self.get_operand(addressing_mode);
+        let register_a_sign = self.register_a & 0b1000_0000;
+        let operand_sign = operand & 0b1000_0000;
         let carry = self.get_flag_state(STATUS_FLAG_MASK_CARRY);
         let (temp_sum, overflow_occured_on_first_addition) =
             self.register_a.overflowing_add(operand);
@@ -272,9 +287,18 @@ impl CPU {
         self.register_a = final_sum;
         if overflow_occured_on_first_addition || overflow_occured_on_second_addition {
             self.set_flag(STATUS_FLAG_MASK_CARRY);
+            self.set_flag(STATUS_FLAG_MASK_OVERFLOW);
         } else {
             self.clear_flag(STATUS_FLAG_MASK_CARRY)
         };
+
+        let result_sign = self.register_a & 0b1000_0000;
+        if register_a_sign == operand_sign && result_sign != register_a_sign {
+            self.set_flag(STATUS_FLAG_MASK_OVERFLOW);
+        } else {
+            self.clear_flag(STATUS_FLAG_MASK_OVERFLOW);
+        }
+
         self.update_negative_flag(self.register_a);
         self.update_zero_flag(self.register_a);
     }
@@ -485,6 +509,12 @@ impl CPU {
         self.update_zero_flag(self.register_a);
     }
 
+    fn txa(&mut self) {
+        self.register_a = self.register_x;
+        self.update_zero_flag(self.register_a);
+        self.update_negative_flag(self.register_a);
+    }
+
     fn update_zero_flag(&mut self, register: u8) {
         if register == 0 {
             self.set_flag(STATUS_FLAG_MASK_ZERO);
@@ -493,8 +523,8 @@ impl CPU {
         }
     }
 
-    fn update_negative_flag(&mut self, register: u8) {
-        if register & 0b1000_0000 != 0 {
+    fn update_negative_flag(&mut self, register_value: u8) {
+        if register_value & 0b1000_0000 != 0 {
             self.set_flag(STATUS_FLAG_MASK_NEGATIVE);
         } else {
             self.clear_flag(STATUS_FLAG_MASK_NEGATIVE);
@@ -826,6 +856,19 @@ mod test_cpu {
         assert_eq!(cpu.status, expected_status)
     }
 
+    #[test_case(0b0000_0000, 0x7A, 0b0000_0000)]
+    #[test_case(0b0000_0000, 0x0, 0b0000_0010)]
+    #[test_case(0b0000_0000, 0xFF, 0b1000_0000)]
+    fn test_txa(status: u8, x: u8, expected_status: u8) {
+        let mut cpu = CPU::new();
+        cpu.status = status;
+        cpu.register_x = x;
+        cpu.txa();
+
+        assert_eq!(cpu.register_a, x);
+        assert_eq!(cpu.status, expected_status);
+    }
+
     #[test]
     fn test_addressing_mode_immediate() {
         let mut cpu = CPU::new();
@@ -954,12 +997,5 @@ mod test_cpu {
         cpu.register_a = 0x80;
         let result = cpu.get_operand(&AddressingMode::Accumulator);
         assert_eq!(result, 0x80);
-    }
-
-    #[test]
-    fn run_test_from_json() {
-        // init cpu
-        // update state
-        // while next instruction, execute()
     }
 }
