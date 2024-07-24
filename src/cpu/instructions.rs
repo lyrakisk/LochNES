@@ -14,9 +14,8 @@ pub enum AddressingMode {
     Absolute,
     Absolute_X,
     Absolute_Y,
-    Indirect, // todo: cleanup
     Indexed_Idirect_X,
-    Indexed_Idirect_Y,
+    Indexed_Indirect_Y,
     Indirect_indexed_X,
     Indirect_indexed_Y,
 }

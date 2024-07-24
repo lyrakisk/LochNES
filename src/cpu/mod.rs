@@ -2,8 +2,6 @@ mod instructions;
 
 use crate::cpu::instructions::*;
 
-type ExitCode = u8;
-
 const STATUS_FLAG_MASK_CARRY: u8 = 0b00000001;
 const STATUS_FLAG_MASK_ZERO: u8 = 0b00000010;
 const STATUS_FLAG_MASK_OVERFLOW: u8 = 0b01000000;
@@ -248,17 +246,13 @@ impl CPU {
             AddressingMode::Absolute_Y => self
                 .mem_read_u16(self.program_counter)
                 .wrapping_add(self.register_y as u16),
-            AddressingMode::Indirect => {
-                let indirect_address = self.mem_read_u16(self.program_counter);
-                self.mem_read_u16(indirect_address)
-            }
             AddressingMode::Indexed_Idirect_X => {
                 let indirect_address = self
                     .mem_read(self.program_counter)
                     .wrapping_add(self.register_x);
                 self.mem_read_u16(indirect_address as u16)
             }
-            AddressingMode::Indexed_Idirect_Y => {
+            AddressingMode::Indexed_Indirect_Y => {
                 let indirect_address = self
                     .mem_read(self.program_counter)
                     .wrapping_add(self.register_y);
@@ -963,16 +957,6 @@ mod test_cpu {
     }
 
     #[test]
-    fn test_addressing_mode_indirect() {
-        let mut cpu = CPU::new();
-        cpu.program_counter = 0x8000;
-        cpu.mem_write_u16(0x8000, 0x0120);
-        cpu.mem_write_u16(0x0120, 0xBAFC);
-        let result = cpu.get_operand_address(&AddressingMode::Indirect);
-        assert_eq!(result, 0xBAFC);
-    }
-
-    #[test]
     fn test_addressing_mode_indexed_indirect_x() {
         let mut cpu = CPU::new();
         cpu.program_counter = 0x8000;
@@ -990,7 +974,7 @@ mod test_cpu {
         cpu.mem_write(0x8000, 0x20);
         cpu.mem_write_u16(0x0021, 0xBAFC);
         cpu.register_y = 0x01;
-        let result = cpu.get_operand_address(&AddressingMode::Indexed_Idirect_Y);
+        let result = cpu.get_operand_address(&AddressingMode::Indexed_Indirect_Y);
         assert_eq!(result, 0xBAFC);
     }
 
