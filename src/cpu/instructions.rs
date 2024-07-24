@@ -1,7 +1,7 @@
 use once_cell::sync::Lazy;
 use std::{collections::HashMap, ops::Add};
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 #[allow(non_camel_case_types)]
 pub enum AddressingMode {
     Implicit,
@@ -21,6 +21,7 @@ pub enum AddressingMode {
     Indirect_indexed_Y,
 }
 
+#[derive(Clone)]
 pub struct Instruction {
     pub opcode: u8,
     pub name: &'static str,

@@ -26,7 +26,7 @@ pub struct CPU {
     pub register_y: u8,
     pub status: u8,
     pub program_counter: u16,
-    memory: [u8; 0xFFFF],
+    memory: [u8; 65536],
     // todo: add stack pointer
 }
 
@@ -38,7 +38,7 @@ impl CPU {
             register_y: 0,
             status: 0, // todo: according to nesdev wiki, the 5th bit is always 1, https://www.nesdev.org/wiki/Status_flags
             program_counter: 0x8000,
-            memory: [0; 0xFFFF], // should everything be initialized to zero?
+            memory: [0; 65536], // should everything be initialized to zero?
         }
     }
 
@@ -51,31 +51,58 @@ impl CPU {
 
     pub fn run(&mut self) {
         loop {
-            let opcode = self.memory[self.program_counter as usize];
-            self.program_counter += 1;
-
-            if !INSTRUCTIONS.contains_key(&opcode) {
-                return;
-            }
-
-            let instruction = &INSTRUCTIONS[&opcode];
-
-            match self.execute(&instruction) {
-                Ok(()) => (),
-                Err(InstructionExecutionError::INTERRUPT_HANDLING_NOT_IMPLEMENTED) => {
+            match self.execute_next_instruction() {
+                Err(_) => {
                     return;
                 }
+                Ok(()) => {
+                    continue;
+                }
             }
-
-            self.program_counter += (instruction.bytes as u16) - 1;
         }
     }
 
-    fn decode(opcode: u8) -> Option<Instruction> {
-        todo!();
+    fn execute_next_instruction(&mut self) -> Result<(), u8> {
+        let opcode = self.fetch();
+
+        let instruction = self.decode(opcode);
+
+        if instruction.is_none() {
+            return Err(1);
+        }
+
+        let instruction_unwrapped = instruction.unwrap();
+
+        match self.execute(instruction_unwrapped.clone()) {
+            Ok(()) => (),
+            _ => {
+                return Ok(());
+            }
+        }
+
+        // When program counter reaches the end of memory, it wraps around to the beginning
+        self.program_counter = self
+            .program_counter
+            .wrapping_add(instruction_unwrapped.bytes as u16 - 1);
+
+        Ok(())
     }
 
-    fn execute(&mut self, instruction: &Instruction) -> Result<(), InstructionExecutionError> {
+    fn fetch(&mut self) -> u8 {
+        let opcode = self.memory[self.program_counter as usize];
+        self.program_counter = self.program_counter.wrapping_add(1);
+        return opcode;
+    }
+
+    fn decode(&self, opcode: u8) -> Option<Instruction> {
+        if !INSTRUCTIONS.contains_key(&opcode) {
+            return None;
+        } else {
+            return Some(INSTRUCTIONS[&opcode].clone());
+        }
+    }
+
+    fn execute(&mut self, instruction: Instruction) -> Result<(), InstructionExecutionError> {
         match instruction.name {
             "ADC" => {
                 self.adc(&instruction.addressing_mode);
