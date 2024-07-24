@@ -42,7 +42,7 @@ A (soon to be) fully-featured NES emulator written in Rust.
 - [ ] DEY
 - [ ] EOR
 - [ ] INC
-- [ ] INX
+- [X] INX
 - [ ] INY
 - [ ] JMP
 - [ ] JSR
