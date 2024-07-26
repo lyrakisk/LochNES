@@ -76,3 +76,8 @@ A (soon to be) fully-featured NES emulator written in Rust.
 
 ### Illegal Opcodes
 At the moment, the emulator does not implement any illegal opcodes. If it encounters one, it will ignore it.
+
+# Resources
+- https://github.com/bugzmanov/nes_ebook
+- https://www.nesdev.org
+- https://archive.org/details/6502UsersManual/mode/2up
