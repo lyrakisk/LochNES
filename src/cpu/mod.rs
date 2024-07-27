@@ -17,7 +17,7 @@ enum InstructionExecutionError {
     INTERRUPT_HANDLING_NOT_IMPLEMENTED,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct CPU {
     pub register_a: u8,
     pub register_x: u8,
@@ -558,6 +558,7 @@ mod test_cpu {
     use std::ops::Add;
 
     use super::*;
+    use json::JsonValue;
     use test_case::test_case;
 
     #[test_case(0b0, 0b0000_0010)]
@@ -1008,5 +1009,65 @@ mod test_cpu {
         cpu.register_a = 0x80;
         let result = cpu.get_operand(&AddressingMode::Accumulator);
         assert_eq!(result, 0x80);
+    }
+
+    #[test]
+    fn run_test_from_json() {
+        let tests_string = std::fs::read_to_string("submodules/65x02/nes6502/v1/69.json").unwrap();
+        let tests = json::parse(tests_string.as_str()).unwrap();
+
+        for i in 0..tests.len() {
+            run_test(&tests[i]);
+        }
+    }
+
+    // todo: derive from file, one test per line
+    fn run_test(test: &JsonValue) {
+        let name = &test["name"];
+        println!("Testing with instructions: {}", name);
+
+        let initial_cpu = cpu_from_json_value(&test["initial"]);
+
+        let final_cpu = cpu_from_json_value(&test["final"]);
+
+        let mut cpu = initial_cpu.clone();
+
+        cpu.execute_next_instruction();
+
+        assert_eq!(cpu.program_counter, final_cpu.program_counter);
+        assert_eq!(
+            cpu.register_a, final_cpu.register_a,
+            "Register a values don't match\n expected: {}\n   actual: {}",
+            final_cpu.register_a, cpu.register_a
+        );
+        assert_eq!(cpu.status, final_cpu.status, "\nStatus flags don't match\n            NV_BDIZC\n expected : {:08b}\n   actual : {:08b}", final_cpu.status, cpu.status);
+        assert_eq!(
+            cpu.register_x, final_cpu.register_x,
+            "Register x values don't match\n expected: {}\n   actual: {}",
+            final_cpu.register_x, cpu.register_x
+        );
+        assert_eq!(
+            cpu.register_y, final_cpu.register_y,
+            "Register y values don't match"
+        );
+        // todo: assert ram final == cpu.memory
+    }
+
+    fn cpu_from_json_value(json_value: &JsonValue) -> CPU {
+        let mut cpu = CPU::new();
+        cpu.program_counter = json_value["pc"].as_u16().unwrap();
+        cpu.status = json_value["p"].as_u8().unwrap();
+        cpu.register_a = json_value["a"].as_u8().unwrap();
+        cpu.register_x = json_value["x"].as_u8().unwrap();
+        cpu.register_y = json_value["y"].as_u8().unwrap();
+
+        for i in 0..3 {
+            cpu.mem_write(
+                json_value["ram"][i][0].as_u16().unwrap(),
+                json_value["ram"][i][1].as_u8().unwrap(),
+            );
+        }
+
+        return cpu;
     }
 }
