@@ -1,0 +1,3 @@
+[submodule "submodules/65x02"]
+	path = submodules/65x02
+	url = git@github.com:lyrakisk/65x02.git
