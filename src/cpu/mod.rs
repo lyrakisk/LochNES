@@ -1011,9 +1011,14 @@ mod test_cpu {
         assert_eq!(result, 0x80);
     }
 
-    #[test]
-    fn run_test_from_json() {
-        let tests_string = std::fs::read_to_string("submodules/65x02/nes6502/v1/69.json").unwrap();
+    #[test_case("submodules/65x02/nes6502/v1/18.json")]
+    #[test_case("submodules/65x02/nes6502/v1/69.json")]
+    #[test_case("submodules/65x02/nes6502/v1/aa.json")]
+    #[test_case("submodules/65x02/nes6502/v1/a9.json")]
+    #[test_case("submodules/65x02/nes6502/v1/c9.json")]
+    #[test_case("submodules/65x02/nes6502/v1/8a.json")]
+    fn run_test_from_json(path: &str) {
+        let tests_string = std::fs::read_to_string(path).unwrap();
         let tests = json::parse(tests_string.as_str()).unwrap();
 
         for i in 0..tests.len() {
