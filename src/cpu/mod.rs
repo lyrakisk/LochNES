@@ -240,11 +240,10 @@ impl CPU {
                 .mem_read(self.program_counter)
                 .wrapping_add(self.register_y) as u16,
             AddressingMode::Absolute => {
-                ((self.memory[self.program_counter as usize + 1] as u16) << 8)
-                    + self.memory[self.program_counter as usize] as u16
+                self.mem_read_u16(self.program_counter)
             }
             AddressingMode::Absolute_X => self
-                .get_operand_address(&AddressingMode::Absolute)
+                .mem_read_u16(self.program_counter)
                 .wrapping_add(self.register_x as u16),
             AddressingMode::Absolute_Y => self
                 .mem_read_u16(self.program_counter)
@@ -954,11 +953,11 @@ mod test_cpu {
     #[test]
     fn test_addressing_mode_absolute_y() {
         let mut cpu = CPU::new();
-        cpu.program_counter = 0xAAAA;
-        cpu.register_y = 0x80;
-        cpu.mem_write_u16(0xAAAA, 0x8000);
+        cpu.program_counter = 0x0;
+        cpu.mem_write_u16(0x00, 2000);
+        cpu.register_y = 82;
         let result = cpu.get_operand_address(&AddressingMode::Absolute_Y);
-        assert_eq!(result, 0x8080);
+        assert_eq!(result, 2082);
     }
 
     #[test]
