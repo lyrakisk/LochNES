@@ -1011,7 +1011,9 @@ mod test_cpu {
         assert_eq!(result, 0x80);
     }
 
+    #[test_case("submodules/65x02/nes6502/v1/0a.json")]
     #[test_case("submodules/65x02/nes6502/v1/18.json")]
+    #[test_case("submodules/65x02/nes6502/v1/29.json")]
     #[test_case("submodules/65x02/nes6502/v1/69.json")]
     #[test_case("submodules/65x02/nes6502/v1/aa.json")]
     #[test_case("submodules/65x02/nes6502/v1/a9.json")]
