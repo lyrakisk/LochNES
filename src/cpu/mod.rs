@@ -200,8 +200,12 @@ impl CPU {
     }
 
     fn mem_read_u16(&self, address: u16) -> u16 {
-        let index = address as usize;
-        return u16::from_le_bytes([self.memory[index], self.memory[index + 1]]);
+        let low_order_address = address as usize;
+        let high_order_address = address.wrapping_add(1) as usize;
+        return u16::from_le_bytes([
+            self.memory[low_order_address],
+            self.memory[high_order_address],
+        ]);
     }
 
     fn mem_write_u16(&mut self, address: u16, data: u16) {
@@ -210,7 +214,7 @@ impl CPU {
         self.memory[index] = bytes[0];
         println!("Writing {:#01x} to address {:#01x}", bytes[0], index);
         self.memory[index + 1] = bytes[1];
-        println!("Writing {:#01x} to address {:#01x}", bytes[1], index + 1);
+        println!("Writing {:#01x} to address {:#01x}", bytes[1], index + 1); // TODO: wrapping add
     }
 
     fn get_flag_state(&self, mask: u8) -> FlagStates {
@@ -239,9 +243,7 @@ impl CPU {
             AddressingMode::ZeroPage_Y => self
                 .mem_read(self.program_counter)
                 .wrapping_add(self.register_y) as u16,
-            AddressingMode::Absolute => {
-                self.mem_read_u16(self.program_counter)
-            }
+            AddressingMode::Absolute => self.mem_read_u16(self.program_counter),
             AddressingMode::Absolute_X => self
                 .mem_read_u16(self.program_counter)
                 .wrapping_add(self.register_x as u16),
@@ -1019,6 +1021,7 @@ mod test_cpu {
     #[test_case("submodules/65x02/nes6502/v1/29.json")]
     #[test_case("submodules/65x02/nes6502/v1/69.json")]
     #[test_case("submodules/65x02/nes6502/v1/6d.json")]
+    #[test_case("submodules/65x02/nes6502/v1/79.json")]
     #[test_case("submodules/65x02/nes6502/v1/7d.json")]
     #[test_case("submodules/65x02/nes6502/v1/aa.json")]
     #[test_case("submodules/65x02/nes6502/v1/a9.json")]
