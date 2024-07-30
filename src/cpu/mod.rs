@@ -239,7 +239,10 @@ impl CPU {
             AddressingMode::ZeroPage_Y => self
                 .mem_read(self.program_counter)
                 .wrapping_add(self.register_y) as u16,
-            AddressingMode::Absolute => self.mem_read_u16(self.program_counter),
+            AddressingMode::Absolute => {
+                ((self.memory[self.program_counter as usize + 1] as u16) << 8)
+                    + self.memory[self.program_counter as usize] as u16
+            }
             AddressingMode::Absolute_X => self
                 .mem_read_u16(self.program_counter)
                 .wrapping_add(self.register_x as u16),
@@ -931,10 +934,11 @@ mod test_cpu {
     #[test]
     fn test_addressing_mode_absolute() {
         let mut cpu = CPU::new();
-        cpu.program_counter = 0xAAAA;
-        cpu.mem_write_u16(0xAAAA, 0x8000);
+        cpu.program_counter = 0x0;
+        cpu.memory[0x0] = 0x9e;
+        cpu.memory[0x1] = 0x5e;
         let result = cpu.get_operand_address(&AddressingMode::Absolute);
-        assert_eq!(result, 0x8000);
+        assert_eq!(result, 0x5e9e);
     }
 
     #[test]
@@ -1015,6 +1019,7 @@ mod test_cpu {
     #[test_case("submodules/65x02/nes6502/v1/18.json")]
     #[test_case("submodules/65x02/nes6502/v1/29.json")]
     #[test_case("submodules/65x02/nes6502/v1/69.json")]
+    #[test_case("submodules/65x02/nes6502/v1/6d.json")]
     #[test_case("submodules/65x02/nes6502/v1/aa.json")]
     #[test_case("submodules/65x02/nes6502/v1/a9.json")]
     #[test_case("submodules/65x02/nes6502/v1/c9.json")]
@@ -1068,10 +1073,10 @@ mod test_cpu {
         cpu.register_x = json_value["x"].as_u8().unwrap();
         cpu.register_y = json_value["y"].as_u8().unwrap();
 
-        for i in 0..3 {
+        for ram_tuple in json_value["ram"].members() {
             cpu.mem_write(
-                json_value["ram"][i][0].as_u16().unwrap(),
-                json_value["ram"][i][1].as_u8().unwrap(),
+                ram_tuple[0].as_u16().unwrap(),
+                ram_tuple[1].as_u8().unwrap(),
             );
         }
 
