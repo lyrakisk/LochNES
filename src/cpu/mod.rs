@@ -244,7 +244,7 @@ impl CPU {
                     + self.memory[self.program_counter as usize] as u16
             }
             AddressingMode::Absolute_X => self
-                .mem_read_u16(self.program_counter)
+                .get_operand_address(&AddressingMode::Absolute)
                 .wrapping_add(self.register_x as u16),
             AddressingMode::Absolute_Y => self
                 .mem_read_u16(self.program_counter)
@@ -944,11 +944,11 @@ mod test_cpu {
     #[test]
     fn test_addressing_mode_absolute_x() {
         let mut cpu = CPU::new();
-        cpu.program_counter = 0xAAAA;
-        cpu.register_x = 0x80;
-        cpu.mem_write_u16(0xAAAA, 0x8000);
+        cpu.program_counter = 0x0;
+        cpu.mem_write_u16(0x00, 2000);
+        cpu.register_x = 82;
         let result = cpu.get_operand_address(&AddressingMode::Absolute_X);
-        assert_eq!(result, 0x8080);
+        assert_eq!(result, 2082);
     }
 
     #[test]
@@ -1020,6 +1020,7 @@ mod test_cpu {
     #[test_case("submodules/65x02/nes6502/v1/29.json")]
     #[test_case("submodules/65x02/nes6502/v1/69.json")]
     #[test_case("submodules/65x02/nes6502/v1/6d.json")]
+    #[test_case("submodules/65x02/nes6502/v1/7d.json")]
     #[test_case("submodules/65x02/nes6502/v1/aa.json")]
     #[test_case("submodules/65x02/nes6502/v1/a9.json")]
     #[test_case("submodules/65x02/nes6502/v1/c9.json")]
