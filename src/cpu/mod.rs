@@ -259,7 +259,7 @@ impl CPU {
             AddressingMode::Absolute_Y => self
                 .mem_read_u16(self.program_counter)
                 .wrapping_add(self.register_y as u16),
-            AddressingMode::Indexed_Idirect_X => {
+            AddressingMode::Indexed_Indirect_X => {
                 let indirect_address = self
                     .mem_read(self.program_counter)
                     .wrapping_add(self.register_x);
@@ -978,7 +978,7 @@ mod test_cpu {
         cpu.mem_write(0x8000, 0x20);
         cpu.mem_write_u16(0x0021, 0xBAFC);
         cpu.register_x = 0x01;
-        let result = cpu.get_operand_address(&AddressingMode::Indexed_Idirect_X);
+        let result = cpu.get_operand_address(&AddressingMode::Indexed_Indirect_X);
         assert_eq!(result, 0xBAFC);
     }
 
