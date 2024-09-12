@@ -200,11 +200,20 @@ impl CPU {
     }
 
     fn mem_read_u16(&self, address: u16) -> u16 {
-        let low_order_address = address as usize;
-        let high_order_address = address.wrapping_add(1) as usize;
+        let low_order_address = address;
+        let high_order_address = address.wrapping_add(1);
         return u16::from_le_bytes([
-            self.memory[low_order_address],
-            self.memory[high_order_address],
+            self.memory[low_order_address as usize],
+            self.memory[high_order_address as usize],
+        ]);
+    }
+
+    fn zero_page_read_u16(&self, address: u8) -> u16 {
+        let low_order_address = address;
+        let high_order_address = address.wrapping_add(1);
+        return u16::from_le_bytes([
+            self.memory[low_order_address as usize],
+            self.memory[high_order_address as usize],
         ]);
     }
 
@@ -254,13 +263,13 @@ impl CPU {
                 let indirect_address = self
                     .mem_read(self.program_counter)
                     .wrapping_add(self.register_x);
-                self.mem_read_u16(indirect_address as u16)
+                self.zero_page_read_u16(indirect_address)
             }
             AddressingMode::Indexed_Indirect_Y => {
                 let indirect_address = self
                     .mem_read(self.program_counter)
                     .wrapping_add(self.register_y);
-                self.mem_read_u16(indirect_address as u16)
+                self.zero_page_read_u16(indirect_address)
             }
             AddressingMode::Indirect_indexed_X => {
                 let indirect_address = self.mem_read_u16(self.program_counter);
@@ -1019,6 +1028,7 @@ mod test_cpu {
     #[test_case("submodules/65x02/nes6502/v1/0a.json")]
     #[test_case("submodules/65x02/nes6502/v1/18.json")]
     #[test_case("submodules/65x02/nes6502/v1/29.json")]
+    #[test_case("submodules/65x02/nes6502/v1/61.json")]
     #[test_case("submodules/65x02/nes6502/v1/69.json")]
     #[test_case("submodules/65x02/nes6502/v1/6d.json")]
     #[test_case("submodules/65x02/nes6502/v1/79.json")]
