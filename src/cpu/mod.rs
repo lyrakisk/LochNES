@@ -163,6 +163,10 @@ impl CPU {
                 self.lda(&instruction.addressing_mode);
                 Ok(())
             }
+            "LDY" => {
+                self.ldy(&instruction.addressing_mode);
+                Ok(())
+            }
             "TAX" => {
                 self.tax();
                 Ok(())
@@ -502,6 +506,13 @@ impl CPU {
         self.register_a = operand;
         self.update_zero_flag(self.register_a);
         self.update_negative_flag(self.register_a);
+    }
+
+    fn ldy(&mut self, addressing_mode: &AddressingMode) {
+        let operand = self.get_operand(addressing_mode);
+        self.register_y = operand;
+        self.update_zero_flag(self.register_y);
+        self.update_negative_flag(self.register_y);
     }
 
     fn tax(&mut self) {
@@ -872,6 +883,29 @@ mod test_cpu {
             negative_flag_state, expected_negative_flag_state,
             "Expected negative flag {:?}, but got {:?}",
             expected_negative_flag_state, negative_flag_state
+        );
+    }
+    #[test_case(0b0000_0001, FlagStates::CLEAR, FlagStates::CLEAR)]
+    #[test_case(0b0000_0000, FlagStates::SET, FlagStates::CLEAR)]
+    #[test_case(0b1000_0000, FlagStates::CLEAR, FlagStates::SET)]
+    fn test_ldy(
+        register_y_value: u8,
+        expected_zero_flag_state: FlagStates,
+        expected_negative_flag: FlagStates,
+    ) {
+        let mut cpu = CPU::new();
+        cpu.program_counter = 0xAAAA;
+        cpu.register_y = 151;
+        cpu.mem_write(cpu.program_counter, register_y_value);
+        cpu.ldy(&AddressingMode::Immediate);
+        assert_eq!(cpu.register_y, register_y_value);
+        assert_eq!(
+            cpu.get_flag_state(STATUS_FLAG_MASK_ZERO),
+            expected_zero_flag_state
+        );
+        assert_eq!(
+            cpu.get_flag_state(STATUS_FLAG_MASK_NEGATIVE),
+            expected_negative_flag
         );
     }
 
