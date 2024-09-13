@@ -158,6 +158,10 @@ impl CPU {
                 self.cmp(&instruction.addressing_mode);
                 Ok(())
             }
+            "CPX" => {
+                self.cpx(&instruction.addressing_mode);
+                Ok(())
+            }
             "BRK" => Err(InstructionExecutionError::INTERRUPT_HANDLING_NOT_IMPLEMENTED),
             "LDA" => {
                 self.lda(&instruction.addressing_mode);
@@ -489,6 +493,22 @@ impl CPU {
     fn cmp(&mut self, addressing_mode: &AddressingMode) {
         let (result, overflow_occured) = self
             .register_a
+            .overflowing_sub(self.get_operand(&addressing_mode));
+
+        if overflow_occured {
+            self.clear_flag(STATUS_FLAG_MASK_CARRY);
+        } else {
+            self.set_flag(STATUS_FLAG_MASK_CARRY);
+        }
+
+        self.update_zero_flag(result);
+        self.update_negative_flag(result);
+    }
+
+    fn cpx(&mut self, addressing_mode: &AddressingMode) {
+        // code duplication, almost similar to cmp()
+        let (result, overflow_occured) = self
+            .register_x
             .overflowing_sub(self.get_operand(&addressing_mode));
 
         if overflow_occured {
@@ -885,6 +905,47 @@ mod test_cpu {
             expected_negative_flag_state, negative_flag_state
         );
     }
+
+    #[test_case(0x15, 0x10, FlagStates::SET, FlagStates::CLEAR, FlagStates::CLEAR)]
+    #[test_case(0x15, 0x15, FlagStates::SET, FlagStates::SET, FlagStates::CLEAR)]
+    #[test_case(0x15, 0x35, FlagStates::CLEAR, FlagStates::CLEAR, FlagStates::SET)]
+    #[test_case(0xFA, 0x00, FlagStates::SET, FlagStates::CLEAR, FlagStates::SET)]
+    #[test_case(0xFA, 0xFA, FlagStates::SET, FlagStates::SET, FlagStates::CLEAR)]
+    #[test_case(0xFA, 0xFB, FlagStates::CLEAR, FlagStates::CLEAR, FlagStates::SET)]
+
+    fn test_cpx(
+        register_x: u8,
+        memory_value: u8,
+        expected_carry_flag_state: FlagStates,
+        expected_zero_flag_state: FlagStates,
+        expected_negative_flag_state: FlagStates,
+    ) {
+        let mut cpu = CPU::new();
+        cpu.register_x = register_x;
+        cpu.program_counter = 0x8001;
+        cpu.mem_write(0x8001, memory_value);
+
+        cpu.cpx(&AddressingMode::Immediate);
+        let carry_flag_state = cpu.get_flag_state(STATUS_FLAG_MASK_CARRY);
+        let zero_flag_state = cpu.get_flag_state(STATUS_FLAG_MASK_ZERO);
+        let negative_flag_state = cpu.get_flag_state(STATUS_FLAG_MASK_NEGATIVE);
+        assert_eq!(
+            carry_flag_state, expected_carry_flag_state,
+            "Expected carry flag {:?}, but got {:?}",
+            expected_carry_flag_state, carry_flag_state
+        );
+        assert_eq!(
+            zero_flag_state, expected_zero_flag_state,
+            "Expected zero flag {:?}, but got {:?}",
+            expected_zero_flag_state, zero_flag_state
+        );
+        assert_eq!(
+            negative_flag_state, expected_negative_flag_state,
+            "Expected negative flag {:?}, but got {:?}",
+            expected_negative_flag_state, negative_flag_state
+        );
+    }
+
     #[test_case(0b0000_0001, FlagStates::CLEAR, FlagStates::CLEAR)]
     #[test_case(0b0000_0000, FlagStates::SET, FlagStates::CLEAR)]
     #[test_case(0b1000_0000, FlagStates::CLEAR, FlagStates::SET)]
@@ -1070,13 +1131,16 @@ mod test_cpu {
     #[test_case("submodules/65x02/nes6502/v1/75.json")]
     #[test_case("submodules/65x02/nes6502/v1/79.json")]
     #[test_case("submodules/65x02/nes6502/v1/7d.json")]
+    #[test_case("submodules/65x02/nes6502/v1/8a.json")]
     #[test_case("submodules/65x02/nes6502/v1/a0.json")]
     #[test_case("submodules/65x02/nes6502/v1/a5.json")]
     #[test_case("submodules/65x02/nes6502/v1/aa.json")]
     #[test_case("submodules/65x02/nes6502/v1/a9.json")]
     #[test_case("submodules/65x02/nes6502/v1/b5.json")]
     #[test_case("submodules/65x02/nes6502/v1/c9.json")]
-    #[test_case("submodules/65x02/nes6502/v1/8a.json")]
+    #[test_case("submodules/65x02/nes6502/v1/e0.json")]
+    #[test_case("submodules/65x02/nes6502/v1/e4.json")]
+    #[test_case("submodules/65x02/nes6502/v1/ec.json")]
     fn run_test_from_json(path: &str) {
         let tests_string = std::fs::read_to_string(path).unwrap();
         let tests = json::parse(tests_string.as_str()).unwrap();
