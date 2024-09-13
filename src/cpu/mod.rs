@@ -272,13 +272,13 @@ impl CPU {
                 self.zero_page_read_u16(indirect_address)
             }
             AddressingMode::Indirect_indexed_X => {
-                let indirect_address = self.mem_read_u16(self.program_counter);
-                self.mem_read_u16(indirect_address)
+                let indirect_address = self.mem_read(self.program_counter);
+                self.zero_page_read_u16(indirect_address)
                     .wrapping_add(self.register_x as u16)
             }
             AddressingMode::Indirect_indexed_Y => {
-                let indirect_address = self.mem_read_u16(self.program_counter);
-                self.mem_read_u16(indirect_address)
+                let indirect_address = self.mem_read(self.program_counter);
+                self.zero_page_read_u16(indirect_address)
                     .wrapping_add(self.register_y as u16)
             }
             _ => {
@@ -1032,6 +1032,7 @@ mod test_cpu {
     #[test_case("submodules/65x02/nes6502/v1/65.json")]
     #[test_case("submodules/65x02/nes6502/v1/69.json")]
     #[test_case("submodules/65x02/nes6502/v1/6d.json")]
+    #[test_case("submodules/65x02/nes6502/v1/71.json")]
     #[test_case("submodules/65x02/nes6502/v1/75.json")]
     #[test_case("submodules/65x02/nes6502/v1/79.json")]
     #[test_case("submodules/65x02/nes6502/v1/7d.json")]
