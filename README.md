@@ -35,20 +35,20 @@ A (soon to be) fully-featured NES emulator written in Rust.
 - [ ] CLI
 - [X] CLV
 - [X] CMP
-- [ ] CPX
+- [X] CPX
 - [ ] CPY
-- [ ] DEC
-- [ ] DEX
+- [X] DEC
+- [X] DEX
 - [ ] DEY
 - [ ] EOR
-- [ ] INC
+- [X] INC
 - [X] INX
 - [ ] INY
 - [ ] JMP
 - [ ] JSR
 - [ ] LDA
 - [ ] LDX
-- [ ] LDY
+- [X] LDY
 - [ ] LSR
 - [ ] NOP
 - [ ] ORA
