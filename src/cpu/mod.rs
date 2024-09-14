@@ -185,6 +185,10 @@ impl CPU {
                 self.tax();
                 Ok(())
             }
+            "INC" => {
+                self.inc(&instruction.addressing_mode);
+                Ok(())
+            }
             "INX" => {
                 self.inx();
                 Ok(())
@@ -564,6 +568,14 @@ impl CPU {
 
         self.update_zero_flag(self.register_x);
         self.update_negative_flag(self.register_x);
+    }
+
+    fn inc(&mut self, addressing_mode: &AddressingMode) {
+        let address = self.get_operand_address(addressing_mode);
+        let result = self.mem_read(address).wrapping_add(1);
+        self.mem_write(address, result);
+        self.update_zero_flag(result);
+        self.update_negative_flag(result);
     }
 
     fn inx(&mut self) {
@@ -1169,7 +1181,10 @@ mod test_cpu {
     #[test_case("submodules/65x02/nes6502/v1/de.json")]
     #[test_case("submodules/65x02/nes6502/v1/e0.json")]
     #[test_case("submodules/65x02/nes6502/v1/e4.json")]
-    #[test_case("submodules/65x02/nes6502/v1/ec.json")]
+    #[test_case("submodules/65x02/nes6502/v1/e6.json")]
+    #[test_case("submodules/65x02/nes6502/v1/ee.json")]
+    #[test_case("submodules/65x02/nes6502/v1/f6.json")]
+    #[test_case("submodules/65x02/nes6502/v1/fe.json")]
     fn run_test_from_json(path: &str) {
         let tests_string = std::fs::read_to_string(path).unwrap();
         let tests = json::parse(tests_string.as_str()).unwrap();
