@@ -162,6 +162,10 @@ impl CPU {
                 self.cpx(&instruction.addressing_mode);
                 Ok(())
             }
+            "DEC" => {
+                self.dec(&instruction.addressing_mode);
+                Ok(())
+            }
             "BRK" => Err(InstructionExecutionError::INTERRUPT_HANDLING_NOT_IMPLEMENTED),
             "LDA" => {
                 self.lda(&instruction.addressing_mode);
@@ -521,6 +525,14 @@ impl CPU {
         self.update_negative_flag(result);
     }
 
+    fn dec(&mut self, addressing_mode: &AddressingMode) {
+        let address = self.get_operand_address(addressing_mode);
+        let result = self.mem_read(address).wrapping_sub(1);
+        self.mem_write(address, result);
+        self.update_zero_flag(result);
+        self.update_negative_flag(result);
+    }
+
     fn lda(&mut self, addressing_mode: &AddressingMode) {
         let operand = self.get_operand(addressing_mode);
         self.register_a = operand;
@@ -580,16 +592,16 @@ impl CPU {
         self.update_negative_flag(self.register_a);
     }
 
-    fn update_zero_flag(&mut self, register: u8) {
-        if register == 0 {
+    fn update_zero_flag(&mut self, data: u8) {
+        if data == 0 {
             self.set_flag(STATUS_FLAG_MASK_ZERO);
         } else {
             self.clear_flag(STATUS_FLAG_MASK_ZERO);
         }
     }
 
-    fn update_negative_flag(&mut self, register_value: u8) {
-        if register_value & 0b1000_0000 != 0 {
+    fn update_negative_flag(&mut self, data: u8) {
+        if data & 0b1000_0000 != 0 {
             self.set_flag(STATUS_FLAG_MASK_NEGATIVE);
         } else {
             self.clear_flag(STATUS_FLAG_MASK_NEGATIVE);
@@ -1137,7 +1149,11 @@ mod test_cpu {
     #[test_case("submodules/65x02/nes6502/v1/aa.json")]
     #[test_case("submodules/65x02/nes6502/v1/a9.json")]
     #[test_case("submodules/65x02/nes6502/v1/b5.json")]
+    #[test_case("submodules/65x02/nes6502/v1/c6.json")]
     #[test_case("submodules/65x02/nes6502/v1/c9.json")]
+    #[test_case("submodules/65x02/nes6502/v1/ce.json")]
+    #[test_case("submodules/65x02/nes6502/v1/d6.json")]
+    #[test_case("submodules/65x02/nes6502/v1/de.json")]
     #[test_case("submodules/65x02/nes6502/v1/e0.json")]
     #[test_case("submodules/65x02/nes6502/v1/e4.json")]
     #[test_case("submodules/65x02/nes6502/v1/ec.json")]
@@ -1163,7 +1179,11 @@ mod test_cpu {
 
         cpu.execute_next_instruction();
 
-        assert_eq!(cpu.program_counter, final_cpu.program_counter);
+        assert_eq!(
+            cpu.program_counter, final_cpu.program_counter,
+            "Program counter values don't match\n expected: {}\n   actual: {}",
+            final_cpu.program_counter, cpu.program_counter
+        );
         assert_eq!(
             cpu.register_a, final_cpu.register_a,
             "Register a values don't match\n expected: {}\n   actual: {}",
