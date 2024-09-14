@@ -1,5 +1,7 @@
 mod instructions;
 
+use std::ops::Add;
+
 use crate::cpu::instructions::*;
 
 const STATUS_FLAG_MASK_CARRY: u8 = 0b00000001;
@@ -164,6 +166,10 @@ impl CPU {
             }
             "DEC" => {
                 self.dec(&instruction.addressing_mode);
+                Ok(())
+            }
+            "DEX" => {
+                self.dex();
                 Ok(())
             }
             "BRK" => Err(InstructionExecutionError::INTERRUPT_HANDLING_NOT_IMPLEMENTED),
@@ -531,6 +537,12 @@ impl CPU {
         self.mem_write(address, result);
         self.update_zero_flag(result);
         self.update_negative_flag(result);
+    }
+
+    fn dex(&mut self) {
+        self.register_x = self.register_x.wrapping_sub(1);
+        self.update_zero_flag(self.register_x);
+        self.update_negative_flag(self.register_x);
     }
 
     fn lda(&mut self, addressing_mode: &AddressingMode) {
@@ -1151,6 +1163,7 @@ mod test_cpu {
     #[test_case("submodules/65x02/nes6502/v1/b5.json")]
     #[test_case("submodules/65x02/nes6502/v1/c6.json")]
     #[test_case("submodules/65x02/nes6502/v1/c9.json")]
+    #[test_case("submodules/65x02/nes6502/v1/ca.json")]
     #[test_case("submodules/65x02/nes6502/v1/ce.json")]
     #[test_case("submodules/65x02/nes6502/v1/d6.json")]
     #[test_case("submodules/65x02/nes6502/v1/de.json")]
