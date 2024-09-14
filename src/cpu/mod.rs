@@ -580,8 +580,8 @@ impl CPU {
 
     fn inx(&mut self) {
         self.register_x = self.register_x.wrapping_add(1);
-        self.update_zero_flag(self.register_a);
-        self.update_negative_flag(self.register_a);
+        self.update_zero_flag(self.register_x);
+        self.update_negative_flag(self.register_x);
     }
 
     fn sbc(&mut self, addressing_mode: &AddressingMode) {
@@ -1182,6 +1182,7 @@ mod test_cpu {
     #[test_case("submodules/65x02/nes6502/v1/e0.json")]
     #[test_case("submodules/65x02/nes6502/v1/e4.json")]
     #[test_case("submodules/65x02/nes6502/v1/e6.json")]
+    #[test_case("submodules/65x02/nes6502/v1/e8.json")]
     #[test_case("submodules/65x02/nes6502/v1/ee.json")]
     #[test_case("submodules/65x02/nes6502/v1/f6.json")]
     #[test_case("submodules/65x02/nes6502/v1/fe.json")]
