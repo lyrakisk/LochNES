@@ -585,27 +585,28 @@ impl CPU {
     }
 
     fn sbc(&mut self, addressing_mode: &AddressingMode) {
-        let minuend = self.register_a;
-        let subtrahend = self.get_operand(addressing_mode);
+        let operand = !self.get_operand(addressing_mode);
+        let register_a_sign = self.register_a & 0b1000_0000;
+        let operand_sign = operand & 0b1000_0000;
+        let carry = (self.get_flag_state(STATUS_FLAG_MASK_CARRY) as u8);
+        let (temp_sum, overflow_occured_on_first_addition) =
+            self.register_a.overflowing_add(operand);
+        let (final_sum, overflow_occured_on_second_addition) = temp_sum.overflowing_add(carry);
+        self.register_a = final_sum;
+        if overflow_occured_on_first_addition || overflow_occured_on_second_addition {
+            self.set_flag(STATUS_FLAG_MASK_CARRY);
+            self.set_flag(STATUS_FLAG_MASK_OVERFLOW);
+        } else {
+            self.clear_flag(STATUS_FLAG_MASK_CARRY)
+        };
 
-        let carry = (self.get_flag_state(STATUS_FLAG_MASK_CARRY) as u8) ^ 0b0000_0001;
-
-        let result = minuend.wrapping_sub(subtrahend).wrapping_sub(carry);
-
-        if (minuend > 0x7F && subtrahend < 0x7F && result < 0x80)
-            || (minuend < 0x80 && subtrahend > 0x7F && result > 0x7F)
-        {
+        let result_sign = self.register_a & 0b1000_0000;
+        if register_a_sign == operand_sign && result_sign != register_a_sign {
             self.set_flag(STATUS_FLAG_MASK_OVERFLOW);
         } else {
             self.clear_flag(STATUS_FLAG_MASK_OVERFLOW);
         }
 
-        if result > 0x7F {
-            self.clear_flag(STATUS_FLAG_MASK_CARRY);
-        } else {
-            self.set_flag(STATUS_FLAG_MASK_CARRY);
-        }
-        self.register_a = result;
         self.update_negative_flag(self.register_a);
         self.update_zero_flag(self.register_a);
     }
@@ -1180,11 +1181,19 @@ mod test_cpu {
     #[test_case("submodules/65x02/nes6502/v1/d6.json")]
     #[test_case("submodules/65x02/nes6502/v1/de.json")]
     #[test_case("submodules/65x02/nes6502/v1/e0.json")]
+    #[test_case("submodules/65x02/nes6502/v1/e1.json")]
     #[test_case("submodules/65x02/nes6502/v1/e4.json")]
+    #[test_case("submodules/65x02/nes6502/v1/e5.json")]
     #[test_case("submodules/65x02/nes6502/v1/e6.json")]
     #[test_case("submodules/65x02/nes6502/v1/e8.json")]
+    #[test_case("submodules/65x02/nes6502/v1/e9.json")]
+    #[test_case("submodules/65x02/nes6502/v1/ed.json")]
     #[test_case("submodules/65x02/nes6502/v1/ee.json")]
+    #[test_case("submodules/65x02/nes6502/v1/f1.json")]
+    #[test_case("submodules/65x02/nes6502/v1/f5.json")]
     #[test_case("submodules/65x02/nes6502/v1/f6.json")]
+    #[test_case("submodules/65x02/nes6502/v1/f9.json")]
+    #[test_case("submodules/65x02/nes6502/v1/fd.json")]
     #[test_case("submodules/65x02/nes6502/v1/fe.json")]
     fn run_test_from_json(path: &str) {
         let tests_string = std::fs::read_to_string(path).unwrap();
