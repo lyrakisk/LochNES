@@ -80,14 +80,17 @@ impl CPU {
             }
         }
 
-        // When program counter reaches the end of memory, it wraps around to the beginning
-        self.program_counter = self
-            .program_counter
-            .wrapping_add(instruction_unwrapped.bytes as u16 - 1);
-
+        self.update_program_counter(instruction_unwrapped);
         Ok(())
     }
 
+    fn update_program_counter(&mut self, instruction: Instruction) {
+        if (instruction.name != "JMP") {
+            self.program_counter = self
+                .program_counter
+                .wrapping_add(instruction.bytes as u16 - 1);
+        }
+    }
     fn fetch(&mut self) -> u8 {
         let opcode = self.memory[self.program_counter as usize];
         self.program_counter = self.program_counter.wrapping_add(1);
@@ -183,6 +186,10 @@ impl CPU {
             }
             "LDY" => {
                 self.ldy(&instruction.addressing_mode);
+                Ok(())
+            }
+            "JMP" => {
+                self.jmp(&instruction.addressing_mode);
                 Ok(())
             }
             "ORA" => {
@@ -289,6 +296,26 @@ impl CPU {
             AddressingMode::Absolute_Y => self
                 .mem_read_u16(self.program_counter)
                 .wrapping_add(self.register_y as u16),
+            AddressingMode::Indirect => {
+                let indirect_adress = self.mem_read_u16(self.program_counter);
+                let low_order_address = indirect_adress;
+
+                /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+                //  An original 6502 has does not correctly fetch the target address if the indirect vector falls on a page boundary. (source: NES DEV wiki)
+                //  E.g. If the indirect vector falls on $02FF, then the first byte is found at $02FF as expected,
+                //  but the second byte will be at $0200 instead of $0300.
+                //  From the extensive test cases on 6c.json, check example `6c ff f5`.
+                //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+                let high_order_address = match indirect_adress & 0b0000_0000_1111_1111 {
+                    0xFF => indirect_adress & 0b1111_1111_0000_0000,
+                    _ => indirect_adress.wrapping_add(1),
+                };
+
+                u16::from_le_bytes([
+                    self.memory[low_order_address as usize],
+                    self.memory[high_order_address as usize],
+                ])
+            }
             AddressingMode::Indexed_Indirect_X => {
                 let indirect_address = self
                     .mem_read(self.program_counter)
@@ -604,6 +631,10 @@ impl CPU {
         self.register_x = self.register_x.wrapping_add(1);
         self.update_zero_flag(self.register_x);
         self.update_negative_flag(self.register_x);
+    }
+
+    fn jmp(&mut self, addressing_mode: &AddressingMode) {
+        self.program_counter = self.get_operand_address(addressing_mode);
     }
 
     fn sbc(&mut self, addressing_mode: &AddressingMode) {
@@ -1197,6 +1228,7 @@ mod test_cpu {
     #[test_case("submodules/65x02/nes6502/v1/41.json")]
     #[test_case("submodules/65x02/nes6502/v1/45.json")]
     #[test_case("submodules/65x02/nes6502/v1/49.json")]
+    #[test_case("submodules/65x02/nes6502/v1/4c.json")]
     #[test_case("submodules/65x02/nes6502/v1/4d.json")]
     #[test_case("submodules/65x02/nes6502/v1/51.json")]
     #[test_case("submodules/65x02/nes6502/v1/55.json")]
@@ -1205,6 +1237,7 @@ mod test_cpu {
     #[test_case("submodules/65x02/nes6502/v1/61.json")]
     #[test_case("submodules/65x02/nes6502/v1/65.json")]
     #[test_case("submodules/65x02/nes6502/v1/69.json")]
+    #[test_case("submodules/65x02/nes6502/v1/6c.json")]
     #[test_case("submodules/65x02/nes6502/v1/6d.json")]
     #[test_case("submodules/65x02/nes6502/v1/71.json")]
     #[test_case("submodules/65x02/nes6502/v1/75.json")]
