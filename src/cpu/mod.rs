@@ -172,6 +172,10 @@ impl CPU {
                 self.dex();
                 Ok(())
             }
+            "EOR" => {
+                self.eor(&instruction.addressing_mode);
+                Ok(())
+            }
             "BRK" => Err(InstructionExecutionError::INTERRUPT_HANDLING_NOT_IMPLEMENTED),
             "LDA" => {
                 self.lda(&instruction.addressing_mode);
@@ -547,6 +551,13 @@ impl CPU {
         self.register_x = self.register_x.wrapping_sub(1);
         self.update_zero_flag(self.register_x);
         self.update_negative_flag(self.register_x);
+    }
+
+    fn eor(&mut self, addressing_mode: &AddressingMode) {
+        let operand = self.get_operand(addressing_mode);
+        self.register_a = self.register_a ^ operand;
+        self.update_zero_flag(self.register_a);
+        self.update_negative_flag(self.register_a);
     }
 
     fn lda(&mut self, addressing_mode: &AddressingMode) {
@@ -1164,6 +1175,14 @@ mod test_cpu {
     #[test_case("submodules/65x02/nes6502/v1/18.json")]
     #[test_case("submodules/65x02/nes6502/v1/1e.json")]
     #[test_case("submodules/65x02/nes6502/v1/29.json")]
+    #[test_case("submodules/65x02/nes6502/v1/41.json")]
+    #[test_case("submodules/65x02/nes6502/v1/45.json")]
+    #[test_case("submodules/65x02/nes6502/v1/49.json")]
+    #[test_case("submodules/65x02/nes6502/v1/4d.json")]
+    #[test_case("submodules/65x02/nes6502/v1/51.json")]
+    #[test_case("submodules/65x02/nes6502/v1/55.json")]
+    #[test_case("submodules/65x02/nes6502/v1/59.json")]
+    #[test_case("submodules/65x02/nes6502/v1/5d.json")]
     #[test_case("submodules/65x02/nes6502/v1/61.json")]
     #[test_case("submodules/65x02/nes6502/v1/65.json")]
     #[test_case("submodules/65x02/nes6502/v1/69.json")]
