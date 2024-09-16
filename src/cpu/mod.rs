@@ -26,8 +26,8 @@ pub struct CPU {
     pub register_y: u8,
     pub status: u8,
     pub program_counter: u16,
+    pub stack_pointer: u8,
     memory: [u8; 65536],
-    // todo: add stack pointer
 }
 
 impl CPU {
@@ -38,6 +38,7 @@ impl CPU {
             register_y: 0,
             status: 0, // todo: according to nesdev wiki, the 5th bit is always 1, https://www.nesdev.org/wiki/Status_flags
             program_counter: 0x8000,
+            stack_pointer: 0xFF,
             memory: [0; 65536], // should everything be initialized to zero?
         }
     }
@@ -85,7 +86,10 @@ impl CPU {
     }
 
     fn update_program_counter(&mut self, instruction: Instruction) {
-        if (instruction.name != "JMP") {
+        let instr = vec!["JMP", "JSR"];
+        if (instr.contains(&instruction.name)) {
+            return;
+        } else {
             self.program_counter = self
                 .program_counter
                 .wrapping_add(instruction.bytes as u16 - 1);
@@ -190,6 +194,10 @@ impl CPU {
             }
             "JMP" => {
                 self.jmp(&instruction.addressing_mode);
+                Ok(())
+            }
+            "JSR" => {
+                self.jsr(&instruction.addressing_mode);
                 Ok(())
             }
             "ORA" => {
@@ -634,6 +642,18 @@ impl CPU {
     }
 
     fn jmp(&mut self, addressing_mode: &AddressingMode) {
+        self.program_counter = self.get_operand_address(addressing_mode);
+    }
+
+    fn jsr(&mut self, addressing_mode: &AddressingMode) {
+        // Program counter is incremented instead of decremented as requested in the nesdev reference
+        let bytes = (self.program_counter + 1).to_le_bytes();
+
+        // consider method extraction stack_push_u16()
+        self.mem_write(0x0100 + (self.stack_pointer as u16), bytes[1]);
+        self.stack_pointer = self.stack_pointer.wrapping_sub(1);
+        self.mem_write(0x0100 + (self.stack_pointer as u16), bytes[0]);
+        self.stack_pointer = self.stack_pointer.wrapping_sub(1);
         self.program_counter = self.get_operand_address(addressing_mode);
     }
 
@@ -1224,6 +1244,7 @@ mod test_cpu {
     #[test_case("submodules/65x02/nes6502/v1/19.json")]
     #[test_case("submodules/65x02/nes6502/v1/1d.json")]
     #[test_case("submodules/65x02/nes6502/v1/1e.json")]
+    #[test_case("submodules/65x02/nes6502/v1/20.json")]
     #[test_case("submodules/65x02/nes6502/v1/29.json")]
     #[test_case("submodules/65x02/nes6502/v1/41.json")]
     #[test_case("submodules/65x02/nes6502/v1/45.json")]
@@ -1312,7 +1333,31 @@ mod test_cpu {
             cpu.register_y, final_cpu.register_y,
             "Register y values don't match"
         );
-        // todo: assert ram final == cpu.memory
+
+        assert_eq!(
+            cpu.stack_pointer, final_cpu.stack_pointer,
+            "Stack pointer values don't match\n expected: {}\n   actual: {}",
+            final_cpu.stack_pointer, cpu.stack_pointer
+        );
+
+        assert_eq!(
+            cpu.memory,
+            final_cpu.memory,
+            "Memories don't match: \n{}",
+            array_diff(cpu.memory.to_vec(), final_cpu.memory.to_vec())
+        );
+    }
+
+    fn array_diff(left: Vec<u8>, right: Vec<u8>) -> String {
+        let mut display_diff = String::from("");
+
+        for (i, (a, b)) in left.iter().zip(right.iter()).enumerate() {
+            if a != b {
+                display_diff.push_str(&format!("Difference at position {i}: {a} != {b}\n"));
+            }
+        }
+
+        return display_diff;
     }
 
     fn cpu_from_json_value(json_value: &JsonValue) -> CPU {
@@ -1322,6 +1367,7 @@ mod test_cpu {
         cpu.register_a = json_value["a"].as_u8().unwrap();
         cpu.register_x = json_value["x"].as_u8().unwrap();
         cpu.register_y = json_value["y"].as_u8().unwrap();
+        cpu.stack_pointer = json_value["s"].as_u8().unwrap();
 
         for ram_tuple in json_value["ram"].members() {
             cpu.mem_write(
