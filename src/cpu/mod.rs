@@ -185,6 +185,10 @@ impl CPU {
                 self.ldy(&instruction.addressing_mode);
                 Ok(())
             }
+            "ORA" => {
+                self.ora(&instruction.addressing_mode);
+                Ok(())
+            }
             "TAX" => {
                 self.tax();
                 Ok(())
@@ -572,6 +576,13 @@ impl CPU {
         self.register_y = operand;
         self.update_zero_flag(self.register_y);
         self.update_negative_flag(self.register_y);
+    }
+
+    fn ora(&mut self, addressing_mode: &AddressingMode) {
+        let operand = self.get_operand(addressing_mode);
+        self.register_a = self.register_a | operand;
+        self.update_zero_flag(self.register_a);
+        self.update_negative_flag(self.register_a);
     }
 
     fn tax(&mut self) {
@@ -1168,11 +1179,19 @@ mod test_cpu {
         assert_eq!(result, 0x80);
     }
 
+    #[test_case("submodules/65x02/nes6502/v1/01.json")]
+    #[test_case("submodules/65x02/nes6502/v1/05.json")]
     #[test_case("submodules/65x02/nes6502/v1/06.json")]
+    #[test_case("submodules/65x02/nes6502/v1/09.json")]
     #[test_case("submodules/65x02/nes6502/v1/0a.json")]
+    #[test_case("submodules/65x02/nes6502/v1/0d.json")]
     #[test_case("submodules/65x02/nes6502/v1/0e.json")]
+    #[test_case("submodules/65x02/nes6502/v1/11.json")]
+    #[test_case("submodules/65x02/nes6502/v1/15.json")]
     #[test_case("submodules/65x02/nes6502/v1/16.json")]
     #[test_case("submodules/65x02/nes6502/v1/18.json")]
+    #[test_case("submodules/65x02/nes6502/v1/19.json")]
+    #[test_case("submodules/65x02/nes6502/v1/1d.json")]
     #[test_case("submodules/65x02/nes6502/v1/1e.json")]
     #[test_case("submodules/65x02/nes6502/v1/29.json")]
     #[test_case("submodules/65x02/nes6502/v1/41.json")]
