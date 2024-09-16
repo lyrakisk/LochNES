@@ -196,6 +196,7 @@ impl CPU {
                 self.ldy(&instruction.addressing_mode);
                 Ok(())
             }
+            "NOP" => Ok(()),
             "JMP" => {
                 self.jmp(&instruction.addressing_mode);
                 Ok(())
@@ -1320,6 +1321,7 @@ mod test_cpu {
     #[test_case("submodules/65x02/nes6502/v1/e6.json")]
     #[test_case("submodules/65x02/nes6502/v1/e8.json")]
     #[test_case("submodules/65x02/nes6502/v1/e9.json")]
+    #[test_case("submodules/65x02/nes6502/v1/ea.json")]
     #[test_case("submodules/65x02/nes6502/v1/ed.json")]
     #[test_case("submodules/65x02/nes6502/v1/ee.json")]
     #[test_case("submodules/65x02/nes6502/v1/f1.json")]

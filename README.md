@@ -50,7 +50,7 @@ A (soon to be) fully-featured NES emulator written in Rust.
 - [ ] LDX
 - [X] LDY
 - [X] LSR
-- [ ] NOP
+- [X] NOP
 - [X] ORA
 - [ ] PHA
 - [ ] PHP
