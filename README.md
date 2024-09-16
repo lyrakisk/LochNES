@@ -40,18 +40,18 @@ A (soon to be) fully-featured NES emulator written in Rust.
 - [X] DEC
 - [X] DEX
 - [ ] DEY
-- [ ] EOR
+- [X] EOR
 - [X] INC
 - [X] INX
 - [ ] INY
-- [ ] JMP
-- [ ] JSR
-- [ ] LDA
+- [X] JMP
+- [X] JSR
+- [X] LDA
 - [ ] LDX
 - [X] LDY
-- [ ] LSR
+- [X] LSR
 - [ ] NOP
-- [ ] ORA
+- [X] ORA
 - [ ] PHA
 - [ ] PHP
 - [ ] PLA
