@@ -7,6 +7,7 @@ use crate::cpu::instructions::*;
 const STATUS_FLAG_MASK_NEGATIVE: u8 = 0b10000000;
 const STATUS_FLAG_MASK_OVERFLOW: u8 = 0b01000000;
 const STATUS_FLAG_MASK_BREAK_COMMAND: u8 = 0b0001_0000;
+const STATUS_FLAG_INTERRUPT_DISABLE: u8 = 0b0000_0100;
 const STATUS_FLAG_MASK_ZERO: u8 = 0b00000010;
 const STATUS_FLAG_MASK_CARRY: u8 = 0b00000001;
 
@@ -219,6 +220,10 @@ impl CPU {
             }
             "ORA" => {
                 self.ora(&instruction.addressing_mode);
+                Ok(())
+            }
+            "PHP" => {
+                self.php();
                 Ok(())
             }
             "INC" => {
@@ -614,10 +619,10 @@ impl CPU {
     }
 
     fn brk(&mut self) {
-        self.set_flag(STATUS_FLAG_MASK_BREAK_COMMAND);
         let interrupt_vector = self.mem_read_u16(0xFFFE);
         self.stack_push_u16(self.program_counter.wrapping_add(1));
-        self.stack_push(self.status);
+        self.stack_push(self.status | 0b0001_0000);
+        self.set_flag(STATUS_FLAG_INTERRUPT_DISABLE);
         self.program_counter = interrupt_vector;
     }
 
@@ -734,6 +739,11 @@ impl CPU {
         self.register_a = self.register_a | operand;
         self.update_zero_flag(self.register_a);
         self.update_negative_flag(self.register_a);
+    }
+
+    fn php(&mut self) {
+        self.set_flag(STATUS_FLAG_MASK_BREAK_COMMAND);
+        self.stack_push(self.status);
     }
 
     fn inc(&mut self, addressing_mode: &AddressingMode) {
@@ -1382,6 +1392,7 @@ mod test_cpu {
     #[test_case("submodules/65x02/nes6502/v1/01.json")]
     #[test_case("submodules/65x02/nes6502/v1/05.json")]
     #[test_case("submodules/65x02/nes6502/v1/06.json")]
+    // #[test_case("submodules/65x02/nes6502/v1/08.json")]
     #[test_case("submodules/65x02/nes6502/v1/09.json")]
     #[test_case("submodules/65x02/nes6502/v1/0a.json")]
     #[test_case("submodules/65x02/nes6502/v1/0d.json")]
@@ -1522,10 +1533,7 @@ mod test_cpu {
             final_cpu.register_a, cpu.register_a
         );
         
-        // Skip checking status for these instruction, because the tests are wrong
-        if ! &test["name"].to_string().starts_with("00") {
-            assert_eq!(cpu.status, final_cpu.status, "\nStatus flags don't match\n            NV_BDIZC\n expected : {:08b}\n   actual : {:08b}", final_cpu.status, cpu.status);
-        }
+        assert_eq!(cpu.status, final_cpu.status, "\nStatus flags don't match\n            NV_BDIZC\n expected : {:08b}\n   actual : {:08b}", final_cpu.status, cpu.status);
         
         assert_eq!(
             cpu.register_x, final_cpu.register_x,
