@@ -192,12 +192,16 @@ impl CPU {
                 self.lda(&instruction.addressing_mode);
                 Ok(())
             }
-            "LSR" => {
-                self.lsr(&instruction.addressing_mode);
+            "LDX" => {
+                self.ldx(&instruction.addressing_mode);
                 Ok(())
             }
             "LDY" => {
                 self.ldy(&instruction.addressing_mode);
+                Ok(())
+            }
+            "LSR" => {
+                self.lsr(&instruction.addressing_mode);
                 Ok(())
             }
             "NOP" => Ok(()),
@@ -638,10 +642,25 @@ impl CPU {
     }
 
     fn lda(&mut self, addressing_mode: &AddressingMode) {
+        // todo: remove duplicate code, same as ldx() and ldy()
         let operand = self.get_operand(addressing_mode);
         self.register_a = operand;
         self.update_zero_flag(self.register_a);
         self.update_negative_flag(self.register_a);
+    }
+
+    fn ldx(&mut self, addressing_mode: &AddressingMode) {
+        let operand = self.get_operand(addressing_mode);
+        self.register_x = operand;
+        self.update_zero_flag(self.register_x);
+        self.update_negative_flag(self.register_x);
+    }
+
+    fn ldy(&mut self, addressing_mode: &AddressingMode) {
+        let operand = self.get_operand(addressing_mode);
+        self.register_y = operand;
+        self.update_zero_flag(self.register_y);
+        self.update_negative_flag(self.register_y);
     }
 
     fn lsr(&mut self, addressing_mode: &AddressingMode) {
@@ -668,13 +687,6 @@ impl CPU {
         } else {
             self.clear_flag(STATUS_FLAG_MASK_CARRY);
         }
-    }
-
-    fn ldy(&mut self, addressing_mode: &AddressingMode) {
-        let operand = self.get_operand(addressing_mode);
-        self.register_y = operand;
-        self.update_zero_flag(self.register_y);
-        self.update_negative_flag(self.register_y);
     }
 
     fn ora(&mut self, addressing_mode: &AddressingMode) {
@@ -1370,11 +1382,16 @@ mod test_cpu {
     #[test_case("submodules/65x02/nes6502/v1/99.json")]
     #[test_case("submodules/65x02/nes6502/v1/9d.json")]
     #[test_case("submodules/65x02/nes6502/v1/a0.json")]
+    #[test_case("submodules/65x02/nes6502/v1/a2.json")]
     #[test_case("submodules/65x02/nes6502/v1/a5.json")]
-    #[test_case("submodules/65x02/nes6502/v1/aa.json")]
+    #[test_case("submodules/65x02/nes6502/v1/a6.json")]
     #[test_case("submodules/65x02/nes6502/v1/a9.json")]
+    #[test_case("submodules/65x02/nes6502/v1/aa.json")]
+    #[test_case("submodules/65x02/nes6502/v1/ae.json")]
     #[test_case("submodules/65x02/nes6502/v1/b0.json")]
     #[test_case("submodules/65x02/nes6502/v1/b5.json")]
+    #[test_case("submodules/65x02/nes6502/v1/b6.json")]
+    #[test_case("submodules/65x02/nes6502/v1/be.json")]
     #[test_case("submodules/65x02/nes6502/v1/c1.json")]
     #[test_case("submodules/65x02/nes6502/v1/c5.json")]
     #[test_case("submodules/65x02/nes6502/v1/c6.json")]
