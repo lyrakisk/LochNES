@@ -226,6 +226,10 @@ impl CPU {
                 self.php();
                 Ok(())
             }
+            "PLP" => {
+                self.plp();
+                Ok(())
+            }
             "INC" => {
                 self.inc(&instruction.addressing_mode);
                 Ok(())
@@ -282,12 +286,16 @@ impl CPU {
         // Should this also update the program counter?
     }
 
+    fn stack_pop(&mut self) -> u8 {
+        self.stack_pointer = self.stack_pointer.wrapping_add(1);
+        return self.mem_read(0x0100 + (self.stack_pointer as u16));
+    }
     fn stack_pop_u16(&mut self) -> u16 {
         self.stack_pointer = self.stack_pointer.wrapping_add(1);
         let low_order_byte = self.mem_read(0x0100 + (self.stack_pointer as u16));
         self.stack_pointer = self.stack_pointer.wrapping_add(1);
         let high_order_byte = self.mem_read(0x0100 + (self.stack_pointer as u16));
-        
+
         return u16::from_le_bytes([low_order_byte, high_order_byte]).wrapping_add(1);
     }
 
@@ -301,7 +309,6 @@ impl CPU {
         self.stack_pointer = self.stack_pointer.wrapping_sub(1);
         self.mem_write(0x0100 + (self.stack_pointer as u16), bytes[0]);
         self.stack_pointer = self.stack_pointer.wrapping_sub(1);
-
     }
 
     // consider returning reference to memory instead of copying,
@@ -745,6 +752,13 @@ impl CPU {
         self.stack_push(self.status | 0b0001_0000);
     }
 
+    fn plp(&mut self) {
+        self.status = self.stack_pop() | 0b0010_0000;
+        // NesDev reference says that this flag should be set from stack,
+        // but the test suite only passes if I clear it here.
+        self.clear_flag(STATUS_FLAG_MASK_BREAK_COMMAND);
+    }
+
     fn inc(&mut self, addressing_mode: &AddressingMode) {
         let address = self.get_operand_address(addressing_mode);
         let result = self.mem_read(address).wrapping_add(1);
@@ -805,7 +819,7 @@ impl CPU {
 
     fn jsr(&mut self, addressing_mode: &AddressingMode) {
         // Program counter is incremented instead of decremented as requested in the nesdev reference
-        self.stack_push_u16(self.program_counter.wrapping_add(1)); 
+        self.stack_push_u16(self.program_counter.wrapping_add(1));
         self.program_counter = self.get_operand_address(addressing_mode);
     }
 
@@ -1409,6 +1423,7 @@ mod test_cpu {
     #[test_case("submodules/65x02/nes6502/v1/24.json")]
     #[test_case("submodules/65x02/nes6502/v1/25.json")]
     #[test_case("submodules/65x02/nes6502/v1/26.json")]
+    #[test_case("submodules/65x02/nes6502/v1/28.json")]
     #[test_case("submodules/65x02/nes6502/v1/29.json")]
     #[test_case("submodules/65x02/nes6502/v1/2a.json")]
     #[test_case("submodules/65x02/nes6502/v1/2c.json")]
@@ -1531,9 +1546,9 @@ mod test_cpu {
             "Register a values don't match\n expected: {}\n   actual: {}",
             final_cpu.register_a, cpu.register_a
         );
-        
+
         assert_eq!(cpu.status, final_cpu.status, "\nStatus flags don't match\n            NV_BDIZC\n expected : {:08b}\n   actual : {:08b}", final_cpu.status, cpu.status);
-        
+
         assert_eq!(
             cpu.register_x, final_cpu.register_x,
             "Register x values don't match\n expected: {}\n   actual: {}",
