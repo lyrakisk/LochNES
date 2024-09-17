@@ -233,6 +233,10 @@ impl CPU {
                 self.sbc(&instruction.addressing_mode);
                 Ok(())
             }
+            "SEC" => {
+                self.sec();
+                Ok(())
+            }
             "STA" => {
                 self.sta(&instruction.addressing_mode);
                 Ok(())
@@ -757,6 +761,9 @@ impl CPU {
         self.update_zero_flag(self.register_a);
     }
 
+    fn sec(&mut self) {
+        self.set_flag(STATUS_FLAG_MASK_CARRY);
+    }
     fn sta(&mut self, addressing_mode: &AddressingMode) {
         let address = self.get_operand_address(addressing_mode);
         self.mem_write(address, self.register_a);
@@ -1343,6 +1350,7 @@ mod test_cpu {
     #[test_case("submodules/65x02/nes6502/v1/2d.json")]
     #[test_case("submodules/65x02/nes6502/v1/31.json")]
     #[test_case("submodules/65x02/nes6502/v1/35.json")]
+    #[test_case("submodules/65x02/nes6502/v1/38.json")]
     #[test_case("submodules/65x02/nes6502/v1/39.json")]
     #[test_case("submodules/65x02/nes6502/v1/3d.json")]
     #[test_case("submodules/65x02/nes6502/v1/41.json")]
