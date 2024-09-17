@@ -87,7 +87,7 @@ impl CPU {
 
     fn update_program_counter(&mut self, instruction: Instruction) {
         let instr = vec!["JMP", "JSR"];
-        if (instr.contains(&instruction.name)) {
+        if instr.contains(&instruction.name) {
             return;
         } else {
             self.program_counter = self
@@ -374,12 +374,13 @@ impl CPU {
         }
     }
 
-    fn branch_off_program_counter(&self, program_counter: u16, distance: u16) -> u16 {
+    fn branch_off_program_counter(&mut self, distance: u16) {
         if distance > 0x7F {
-            let distance = 0xFF - distance + 1;
-            return program_counter - distance;
+            let distance = 0xff_u16.wrapping_sub(distance).wrapping_add(1);
+            self.program_counter = self.program_counter.wrapping_sub(distance);
         } else {
-            return program_counter + distance - 1;
+            let distance = distance;
+            self.program_counter = self.program_counter.wrapping_add(distance);
         }
     }
 
@@ -450,8 +451,7 @@ impl CPU {
         match self.get_flag_state(STATUS_FLAG_MASK_CARRY) {
             FlagStates::CLEAR => {
                 let distance = self.mem_read(self.program_counter);
-                self.program_counter =
-                    self.branch_off_program_counter(self.program_counter, distance as u16);
+                self.branch_off_program_counter(distance as u16);
             }
             FlagStates::SET => {
                 return;
@@ -463,8 +463,7 @@ impl CPU {
         match self.get_flag_state(STATUS_FLAG_MASK_CARRY) {
             FlagStates::SET => {
                 let distance = self.mem_read(self.program_counter);
-                self.program_counter =
-                    self.branch_off_program_counter(self.program_counter, distance as u16);
+                self.branch_off_program_counter(distance as u16);
             }
             FlagStates::CLEAR => {
                 return;
@@ -476,8 +475,7 @@ impl CPU {
         match self.get_flag_state(STATUS_FLAG_MASK_ZERO) {
             FlagStates::SET => {
                 let distance = self.mem_read(self.program_counter);
-                self.program_counter =
-                    self.branch_off_program_counter(self.program_counter, distance as u16);
+                self.branch_off_program_counter(distance as u16);
             }
             FlagStates::CLEAR => {
                 return;
@@ -503,8 +501,7 @@ impl CPU {
         match self.get_flag_state(STATUS_FLAG_MASK_NEGATIVE) {
             FlagStates::SET => {
                 let distance = self.mem_read(self.program_counter);
-                self.program_counter =
-                    self.branch_off_program_counter(self.program_counter, distance as u16);
+                self.branch_off_program_counter(distance as u16);
             }
             FlagStates::CLEAR => {
                 return;
@@ -516,8 +513,7 @@ impl CPU {
         match self.get_flag_state(STATUS_FLAG_MASK_ZERO) {
             FlagStates::CLEAR => {
                 let distance = self.mem_read(self.program_counter);
-                self.program_counter =
-                    self.branch_off_program_counter(self.program_counter, distance as u16);
+                self.branch_off_program_counter(distance as u16);
             }
             FlagStates::SET => {
                 return;
@@ -529,8 +525,7 @@ impl CPU {
         match self.get_flag_state(STATUS_FLAG_MASK_NEGATIVE) {
             FlagStates::CLEAR => {
                 let distance = self.mem_read(self.program_counter);
-                self.program_counter =
-                    self.branch_off_program_counter(self.program_counter, distance as u16);
+                self.branch_off_program_counter(distance as u16);
             }
             FlagStates::SET => {
                 return;
@@ -542,8 +537,7 @@ impl CPU {
         match self.get_flag_state(STATUS_FLAG_MASK_OVERFLOW) {
             FlagStates::CLEAR => {
                 let distance = self.mem_read(self.program_counter);
-                self.program_counter =
-                    self.branch_off_program_counter(self.program_counter, distance as u16);
+                self.branch_off_program_counter(distance as u16);
             }
             FlagStates::SET => {
                 return;
@@ -555,8 +549,7 @@ impl CPU {
         match self.get_flag_state(STATUS_FLAG_MASK_OVERFLOW) {
             FlagStates::SET => {
                 let distance = self.mem_read(self.program_counter);
-                self.program_counter =
-                    self.branch_off_program_counter(self.program_counter, distance as u16);
+                self.branch_off_program_counter(distance as u16);
             }
             FlagStates::CLEAR => {
                 return;
@@ -923,7 +916,7 @@ mod test_cpu {
     }
 
     #[test_case(0b0000_0001, 0x8080, 0x8080, 0x06)]
-    #[test_case(0b0000_0000, 0xE004, 0xE009, 0x06)]
+    #[test_case(0b0000_0000, 0xE004, 0xE00A, 0x06)]
     #[test_case(0b0000_0000, 0xE009, 0xE003, 0xFA)]
     fn test_bcc(status: u8, program_counter: u16, expected_program_counter: u16, distance: u8) {
         let mut cpu = CPU::new();
@@ -935,7 +928,7 @@ mod test_cpu {
     }
 
     #[test_case(0b0000_0000, 0x8080, 0x8080, 0x06)]
-    #[test_case(0b0000_0001, 0xE004, 0xE009, 0x06)]
+    #[test_case(0b0000_0001, 0xE004, 0xE00A, 0x06)]
     #[test_case(0b0000_0001, 0xE009, 0xE003, 0xFA)]
     fn test_bcs(status: u8, program_counter: u16, expected_program_counter: u16, distance: u8) {
         let mut cpu = CPU::new();
@@ -947,7 +940,7 @@ mod test_cpu {
     }
 
     #[test_case(0b0000_0000, 0x8080, 0x8080, 0x06)]
-    #[test_case(0b0000_0010, 0xE004, 0xE009, 0x06)]
+    #[test_case(0b0000_0010, 0xE004, 0xE00A, 0x06)]
     #[test_case(0b0000_0010, 0xE009, 0xE003, 0xFA)]
     fn test_beq(status: u8, program_counter: u16, expected_program_counter: u16, distance: u8) {
         let mut cpu = CPU::new();
@@ -959,7 +952,7 @@ mod test_cpu {
     }
 
     #[test_case(0b0000_0000, 0x8080, 0x8080, 0x06)]
-    #[test_case(0b1000_0000, 0xE004, 0xE009, 0x06)]
+    #[test_case(0b1000_0000, 0xE004, 0xE00A, 0x06)]
     #[test_case(0b1000_0000, 0xE009, 0xE003, 0xFA)]
     fn test_bmi(status: u8, program_counter: u16, expected_program_counter: u16, distance: u8) {
         let mut cpu = CPU::new();
@@ -971,7 +964,7 @@ mod test_cpu {
     }
 
     #[test_case(0b0000_0010, 0x8080, 0x8080, 0x06)]
-    #[test_case(0b0000_0000, 0xE004, 0xE009, 0x06)]
+    #[test_case(0b0000_0000, 0xE004, 0xE00A, 0x06)]
     #[test_case(0b0000_0000, 0xE009, 0xE003, 0xFA)]
     fn test_bne(status: u8, program_counter: u16, expected_program_counter: u16, distance: u8) {
         let mut cpu = CPU::new();
@@ -983,7 +976,7 @@ mod test_cpu {
     }
 
     #[test_case(0b0100_0000, 0x8080, 0x8080, 0x06)]
-    #[test_case(0b0000_0000, 0xE004, 0xE009, 0x06)]
+    #[test_case(0b0000_0000, 0xE004, 0xE00A, 0x06)]
     #[test_case(0b0000_0000, 0xE009, 0xE003, 0xFA)]
     fn test_bvc(status: u8, program_counter: u16, expected_program_counter: u16, distance: u8) {
         let mut cpu = CPU::new();
@@ -995,7 +988,7 @@ mod test_cpu {
     }
 
     #[test_case(0b0000_0000, 0x8080, 0x8080, 0x06)]
-    #[test_case(0b0100_0000, 0xE004, 0xE009, 0x06)]
+    #[test_case(0b0100_0000, 0xE004, 0xE00A, 0x06)]
     #[test_case(0b0100_0000, 0xE009, 0xE003, 0xFA)]
     fn test_bvs(status: u8, program_counter: u16, expected_program_counter: u16, distance: u8) {
         let mut cpu = CPU::new();
@@ -1323,6 +1316,7 @@ mod test_cpu {
     #[test_case("submodules/65x02/nes6502/v1/79.json")]
     #[test_case("submodules/65x02/nes6502/v1/7d.json")]
     #[test_case("submodules/65x02/nes6502/v1/8a.json")]
+    #[test_case("submodules/65x02/nes6502/v1/90.json")]
     #[test_case("submodules/65x02/nes6502/v1/a0.json")]
     #[test_case("submodules/65x02/nes6502/v1/a5.json")]
     #[test_case("submodules/65x02/nes6502/v1/aa.json")]
