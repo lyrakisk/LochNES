@@ -23,7 +23,7 @@ A (soon to be) fully-featured NES emulator written in Rust.
 - [X] BCC
 - [X] BCS
 - [X] BEQ
-- [ ] BIT
+- [X] BIT
 - [X] BMI
 - [X] BNE
 - [X] BPL

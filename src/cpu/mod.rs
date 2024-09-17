@@ -135,6 +135,10 @@ impl CPU {
                 self.beq();
                 Ok(())
             }
+            "BIT" => {
+                self.bit(&instruction.addressing_mode);
+                Ok(())
+            }
             "BMI" => {
                 self.bmi();
                 Ok(())
@@ -478,6 +482,20 @@ impl CPU {
             FlagStates::CLEAR => {
                 return;
             }
+        }
+    }
+
+    fn bit(&mut self, addressing_mode: &AddressingMode) {
+        let operand = self.get_operand(addressing_mode);
+        let result = self.register_a & operand;
+
+        self.update_zero_flag(result);
+        self.update_negative_flag(operand);
+
+        if (operand & 0b0100_0000 == 0b0100_0000) {
+            self.set_flag(STATUS_FLAG_MASK_OVERFLOW);
+        } else {
+            self.clear_flag(STATUS_FLAG_MASK_OVERFLOW);
         }
     }
 
@@ -1278,7 +1296,9 @@ mod test_cpu {
     #[test_case("submodules/65x02/nes6502/v1/1d.json")]
     #[test_case("submodules/65x02/nes6502/v1/1e.json")]
     #[test_case("submodules/65x02/nes6502/v1/20.json")]
+    #[test_case("submodules/65x02/nes6502/v1/24.json")]
     #[test_case("submodules/65x02/nes6502/v1/29.json")]
+    #[test_case("submodules/65x02/nes6502/v1/2c.json")]
     #[test_case("submodules/65x02/nes6502/v1/41.json")]
     #[test_case("submodules/65x02/nes6502/v1/45.json")]
     #[test_case("submodules/65x02/nes6502/v1/46.json")]
