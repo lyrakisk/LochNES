@@ -278,8 +278,17 @@ impl CPU {
         let low_order_byte = self.mem_read(0x0100 + (self.stack_pointer as u16));
         self.stack_pointer = self.stack_pointer.wrapping_add(1);
         let high_order_byte = self.mem_read(0x0100 + (self.stack_pointer as u16));
-
+        
         return u16::from_le_bytes([low_order_byte, high_order_byte]).wrapping_add(1);
+    }
+
+    fn stack_push_u16(&mut self, data: u16) {
+        let bytes = data.to_le_bytes();
+        self.mem_write(0x0100 + (self.stack_pointer as u16), bytes[1]);
+        self.stack_pointer = self.stack_pointer.wrapping_sub(1);
+        self.mem_write(0x0100 + (self.stack_pointer as u16), bytes[0]);
+        self.stack_pointer = self.stack_pointer.wrapping_sub(1);
+
     }
 
     // consider returning reference to memory instead of copying,
@@ -771,13 +780,7 @@ impl CPU {
 
     fn jsr(&mut self, addressing_mode: &AddressingMode) {
         // Program counter is incremented instead of decremented as requested in the nesdev reference
-        let bytes = (self.program_counter + 1).to_le_bytes();
-
-        // consider method extraction stack_push_u16()
-        self.mem_write(0x0100 + (self.stack_pointer as u16), bytes[1]);
-        self.stack_pointer = self.stack_pointer.wrapping_sub(1);
-        self.mem_write(0x0100 + (self.stack_pointer as u16), bytes[0]);
-        self.stack_pointer = self.stack_pointer.wrapping_sub(1);
+        self.stack_push_u16(self.program_counter.wrapping_add(1)); 
         self.program_counter = self.get_operand_address(addressing_mode);
     }
 
