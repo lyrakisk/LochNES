@@ -128,7 +128,6 @@ pub static INSTRUCTIONS: Lazy<HashMap<u8, Instruction>> = Lazy::new(|| {
         Instruction {opcode: 0xAC, name: "LDY", bytes: 3, addressing_mode: AddressingMode::Absolute},
         Instruction {opcode: 0xBC, name: "LDY", bytes: 3, addressing_mode: AddressingMode::Absolute_X},
         Instruction {opcode: 0xEA, name: "NOP", bytes: 1, addressing_mode: AddressingMode::Implicit},
-        Instruction {opcode: 0xAA, name: "TAX", bytes: 1, addressing_mode: AddressingMode::Implicit},
         Instruction {opcode: 0x09, name: "ORA", bytes: 2, addressing_mode: AddressingMode::Immediate},
         Instruction {opcode: 0x05, name: "ORA", bytes: 2, addressing_mode: AddressingMode::ZeroPage},
         Instruction {opcode: 0x15, name: "ORA", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X},
@@ -146,8 +145,16 @@ pub static INSTRUCTIONS: Lazy<HashMap<u8, Instruction>> = Lazy::new(|| {
         Instruction {opcode: 0xF9, name: "SBC", bytes: 3, addressing_mode: AddressingMode::Absolute_Y},
         Instruction {opcode: 0xE1, name: "SBC", bytes: 2, addressing_mode: AddressingMode::Indexed_Indirect_X},
         Instruction {opcode: 0xF1, name: "SBC", bytes: 2, addressing_mode: AddressingMode::Indirect_indexed_Y},
+        Instruction {opcode: 0x85, name: "STA", bytes: 2, addressing_mode: AddressingMode::ZeroPage},
+        Instruction {opcode: 0x95, name: "STA", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X},
+        Instruction {opcode: 0x8D, name: "STA", bytes: 3, addressing_mode: AddressingMode::Absolute},
+        Instruction {opcode: 0x9D, name: "STA", bytes: 3, addressing_mode: AddressingMode::Absolute_X},
+        Instruction {opcode: 0x99, name: "STA", bytes: 3, addressing_mode: AddressingMode::Absolute_Y},
+        Instruction {opcode: 0x81, name: "STA", bytes: 2, addressing_mode: AddressingMode::Indexed_Indirect_X},
+        Instruction {opcode: 0x91, name: "STA", bytes: 2, addressing_mode: AddressingMode::Indirect_indexed_Y},
+        Instruction {opcode: 0xAA, name: "TAX", bytes: 1, addressing_mode: AddressingMode::Implicit},
         Instruction {opcode: 0x8A, name: "TXA", bytes: 1, addressing_mode: AddressingMode::Implicit},
-    ]
+        ]
     .into_iter()
     .map(|instruction| (instruction.opcode, instruction))
     .collect()
