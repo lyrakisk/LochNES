@@ -221,6 +221,10 @@ impl CPU {
                 self.inx();
                 Ok(())
             }
+            "RTS" => {
+                self.rts();
+                Ok(())
+            }
             "SBC" => {
                 self.sbc(&instruction.addressing_mode);
                 Ok(())
@@ -253,6 +257,14 @@ impl CPU {
         // Should this also update the program counter?
     }
 
+    fn stack_pop_u16(&mut self) -> u16 {
+        self.stack_pointer = self.stack_pointer.wrapping_add(1);
+        let low_order_byte = self.mem_read(0x0100 + (self.stack_pointer as u16));
+        self.stack_pointer = self.stack_pointer.wrapping_add(1);
+        let high_order_byte = self.mem_read(0x0100 + (self.stack_pointer as u16));
+
+        return u16::from_le_bytes([low_order_byte, high_order_byte]).wrapping_add(1);
+    }
     fn mem_read(&self, address: u16) -> u8 {
         return self.memory[address as usize];
     }
@@ -684,6 +696,10 @@ impl CPU {
         self.register_x = self.register_x.wrapping_add(1);
         self.update_zero_flag(self.register_x);
         self.update_negative_flag(self.register_x);
+    }
+
+    fn rts(&mut self) {
+        self.program_counter = self.stack_pop_u16();
     }
 
     fn jmp(&mut self, addressing_mode: &AddressingMode) {
@@ -1330,6 +1346,7 @@ mod test_cpu {
     #[test_case("submodules/65x02/nes6502/v1/59.json")]
     #[test_case("submodules/65x02/nes6502/v1/5d.json")]
     #[test_case("submodules/65x02/nes6502/v1/5e.json")]
+    #[test_case("submodules/65x02/nes6502/v1/60.json")]
     #[test_case("submodules/65x02/nes6502/v1/61.json")]
     #[test_case("submodules/65x02/nes6502/v1/65.json")]
     #[test_case("submodules/65x02/nes6502/v1/69.json")]
