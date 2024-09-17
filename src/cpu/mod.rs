@@ -742,8 +742,7 @@ impl CPU {
     }
 
     fn php(&mut self) {
-        self.set_flag(STATUS_FLAG_MASK_BREAK_COMMAND);
-        self.stack_push(self.status);
+        self.stack_push(self.status | 0b0001_0000);
     }
 
     fn inc(&mut self, addressing_mode: &AddressingMode) {
@@ -1392,7 +1391,7 @@ mod test_cpu {
     #[test_case("submodules/65x02/nes6502/v1/01.json")]
     #[test_case("submodules/65x02/nes6502/v1/05.json")]
     #[test_case("submodules/65x02/nes6502/v1/06.json")]
-    // #[test_case("submodules/65x02/nes6502/v1/08.json")]
+    #[test_case("submodules/65x02/nes6502/v1/08.json")]
     #[test_case("submodules/65x02/nes6502/v1/09.json")]
     #[test_case("submodules/65x02/nes6502/v1/0a.json")]
     #[test_case("submodules/65x02/nes6502/v1/0d.json")]
