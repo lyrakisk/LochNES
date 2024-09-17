@@ -56,7 +56,7 @@ A (soon to be) fully-featured NES emulator written in Rust.
 - [ ] PHP
 - [ ] PLA
 - [ ] PLP
-- [ ] ROL
+- [X] ROL
 - [ ] ROR
 - [ ] RTI
 - [X] RTS

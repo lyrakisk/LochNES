@@ -225,6 +225,10 @@ impl CPU {
                 self.inx();
                 Ok(())
             }
+            "ROL" => {
+                self.rol(&instruction.addressing_mode);
+                Ok(())
+            }
             "RTS" => {
                 self.rts();
                 Ok(())
@@ -277,6 +281,9 @@ impl CPU {
 
         return u16::from_le_bytes([low_order_byte, high_order_byte]).wrapping_add(1);
     }
+
+    // consider returning reference to memory instead of copying,
+    // because some instructions need to update it in place
     fn mem_read(&self, address: u16) -> u8 {
         return self.memory[address as usize];
     }
@@ -716,6 +723,42 @@ impl CPU {
         self.register_x = self.register_x.wrapping_add(1);
         self.update_zero_flag(self.register_x);
         self.update_negative_flag(self.register_x);
+    }
+
+    fn rol(&mut self, addressing_mode: &AddressingMode) {
+        let carry = self.get_flag_state(STATUS_FLAG_MASK_CARRY);
+
+        let operand: &mut u8;
+        match addressing_mode {
+            AddressingMode::Accumulator => {
+                operand = &mut self.register_a;
+            }
+            _ => {
+                let index = self.get_operand_address(addressing_mode) as usize;
+                operand = &mut self.memory[index];
+            }
+        }
+        let operand_most_significant_bit = ((*operand) & 0b1000_0000) >> 7;
+        let mut result = *operand << 1;
+
+        match carry {
+            FlagStates::SET => {
+                result = result | 0b0000_0001;
+            }
+            FlagStates::CLEAR => {
+                result = result & 0b1111_1110;
+            }
+        }
+        *operand = result;
+
+        self.update_zero_flag(result);
+        self.update_negative_flag(result);
+
+        if operand_most_significant_bit == 1 {
+            self.set_flag(STATUS_FLAG_MASK_CARRY);
+        } else {
+            self.clear_flag(STATUS_FLAG_MASK_CARRY);
+        }
     }
 
     fn rts(&mut self) {
@@ -1356,14 +1399,19 @@ mod test_cpu {
     #[test_case("submodules/65x02/nes6502/v1/21.json")]
     #[test_case("submodules/65x02/nes6502/v1/24.json")]
     #[test_case("submodules/65x02/nes6502/v1/25.json")]
+    #[test_case("submodules/65x02/nes6502/v1/26.json")]
     #[test_case("submodules/65x02/nes6502/v1/29.json")]
+    #[test_case("submodules/65x02/nes6502/v1/2a.json")]
     #[test_case("submodules/65x02/nes6502/v1/2c.json")]
     #[test_case("submodules/65x02/nes6502/v1/2d.json")]
+    #[test_case("submodules/65x02/nes6502/v1/2e.json")]
     #[test_case("submodules/65x02/nes6502/v1/31.json")]
     #[test_case("submodules/65x02/nes6502/v1/35.json")]
+    #[test_case("submodules/65x02/nes6502/v1/36.json")]
     #[test_case("submodules/65x02/nes6502/v1/38.json")]
     #[test_case("submodules/65x02/nes6502/v1/39.json")]
     #[test_case("submodules/65x02/nes6502/v1/3d.json")]
+    #[test_case("submodules/65x02/nes6502/v1/3e.json")]
     #[test_case("submodules/65x02/nes6502/v1/41.json")]
     #[test_case("submodules/65x02/nes6502/v1/45.json")]
     #[test_case("submodules/65x02/nes6502/v1/46.json")]
