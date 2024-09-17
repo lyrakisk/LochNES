@@ -152,6 +152,9 @@ pub static INSTRUCTIONS: Lazy<HashMap<u8, Instruction>> = Lazy::new(|| {
         Instruction {opcode: 0x99, name: "STA", bytes: 3, addressing_mode: AddressingMode::Absolute_Y},
         Instruction {opcode: 0x81, name: "STA", bytes: 2, addressing_mode: AddressingMode::Indexed_Indirect_X},
         Instruction {opcode: 0x91, name: "STA", bytes: 2, addressing_mode: AddressingMode::Indirect_indexed_Y},
+        Instruction {opcode: 0x84, name: "STY", bytes: 2, addressing_mode: AddressingMode::ZeroPage},
+        Instruction {opcode: 0x94, name: "STY", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X},
+        Instruction {opcode: 0x8C, name: "STY", bytes: 3, addressing_mode: AddressingMode::Absolute},
         Instruction {opcode: 0xAA, name: "TAX", bytes: 1, addressing_mode: AddressingMode::Implicit},
         Instruction {opcode: 0x8A, name: "TXA", bytes: 1, addressing_mode: AddressingMode::Implicit},
         ]

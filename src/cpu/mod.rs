@@ -229,6 +229,10 @@ impl CPU {
                 self.sta(&instruction.addressing_mode);
                 Ok(())
             }
+            "STY" => {
+                self.sty(&instruction.addressing_mode);
+                Ok(())
+            }
             "TAX" => {
                 self.tax();
                 Ok(())
@@ -728,6 +732,10 @@ impl CPU {
     fn sta(&mut self, addressing_mode: &AddressingMode) {
         let address = self.get_operand_address(addressing_mode);
         self.mem_write(address, self.register_a);
+    }
+    fn sty(&mut self, addressing_mode: &AddressingMode) {
+        let address = self.get_operand_address(addressing_mode);
+        self.mem_write(address, self.register_y);
     }
 
     fn tax(&mut self) {
@@ -1325,11 +1333,14 @@ mod test_cpu {
     #[test_case("submodules/65x02/nes6502/v1/79.json")]
     #[test_case("submodules/65x02/nes6502/v1/7d.json")]
     #[test_case("submodules/65x02/nes6502/v1/81.json")]
+    #[test_case("submodules/65x02/nes6502/v1/84.json")]
     #[test_case("submodules/65x02/nes6502/v1/85.json")]
     #[test_case("submodules/65x02/nes6502/v1/8a.json")]
+    #[test_case("submodules/65x02/nes6502/v1/8c.json")]
     #[test_case("submodules/65x02/nes6502/v1/8d.json")]
     #[test_case("submodules/65x02/nes6502/v1/90.json")]
     #[test_case("submodules/65x02/nes6502/v1/91.json")]
+    #[test_case("submodules/65x02/nes6502/v1/94.json")]
     #[test_case("submodules/65x02/nes6502/v1/95.json")]
     #[test_case("submodules/65x02/nes6502/v1/99.json")]
     #[test_case("submodules/65x02/nes6502/v1/9d.json")]
