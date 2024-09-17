@@ -249,6 +249,10 @@ impl CPU {
                 self.tax();
                 Ok(())
             }
+            "TAY" => {
+                self.tay();
+                Ok(())
+            }
             "TXA" => {
                 self.txa();
                 Ok(())
@@ -778,6 +782,13 @@ impl CPU {
 
         self.update_zero_flag(self.register_x);
         self.update_negative_flag(self.register_x);
+    }
+
+    fn tay(&mut self) {
+        self.register_y = self.register_a;
+
+        self.update_zero_flag(self.register_y);
+        self.update_negative_flag(self.register_y);
     }
 
     fn txa(&mut self) {

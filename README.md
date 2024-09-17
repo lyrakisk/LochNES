@@ -68,7 +68,7 @@ A (soon to be) fully-featured NES emulator written in Rust.
 - [ ] STX
 - [X] STY
 - [ ] TAX
-- [ ] TAY
+- [X] TAY
 - [ ] TSX
 - [X] TXA
 - [ ] TXS
