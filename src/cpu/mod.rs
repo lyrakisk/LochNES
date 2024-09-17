@@ -1374,6 +1374,7 @@ mod test_cpu {
     #[test_case("submodules/65x02/nes6502/v1/ea.json")]
     #[test_case("submodules/65x02/nes6502/v1/ed.json")]
     #[test_case("submodules/65x02/nes6502/v1/ee.json")]
+    #[test_case("submodules/65x02/nes6502/v1/f0.json")]
     #[test_case("submodules/65x02/nes6502/v1/f1.json")]
     #[test_case("submodules/65x02/nes6502/v1/f5.json")]
     #[test_case("submodules/65x02/nes6502/v1/f6.json")]
