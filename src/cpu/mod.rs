@@ -1,7 +1,5 @@
 mod instructions;
 
-use std::ops::Add;
-
 use crate::cpu::instructions::*;
 
 const STATUS_FLAG_MASK_NEGATIVE: u8 = 0b10000000;
