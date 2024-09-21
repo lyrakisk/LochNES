@@ -47,7 +47,7 @@ A (soon to be) fully-featured NES emulator written in Rust.
 - [X] JMP
 - [X] JSR
 - [X] LDA
-- [ ] LDX
+- [X] LDX
 - [X] LDY
 - [X] LSR
 - [X] NOP
