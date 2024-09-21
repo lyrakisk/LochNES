@@ -1,5 +1,5 @@
 use once_cell::sync::Lazy;
-use std::{collections::HashMap, ops::Add};
+use std::collections::HashMap;
 
 #[derive(Clone, Debug)]
 #[allow(non_camel_case_types)]
@@ -14,10 +14,8 @@ pub enum AddressingMode {
     Absolute,
     Absolute_X,
     Absolute_Y,
-    Indirect, // only supported by the JMP instruction
+    Indirect,
     Indexed_Indirect_X,
-    Indexed_Indirect_Y,
-    Indirect_indexed_X,
     Indirect_indexed_Y,
 }
 

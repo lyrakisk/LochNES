@@ -75,12 +75,7 @@ impl CPU {
 
         let instruction_unwrapped = instruction.unwrap();
 
-        match self.execute(instruction_unwrapped.clone()) {
-            Ok(()) => (),
-            _ => {
-                return Ok(());
-            }
-        }
+        self.execute(instruction_unwrapped.clone());
 
         self.update_program_counter(instruction_unwrapped);
         Ok(())
@@ -96,6 +91,7 @@ impl CPU {
                 .wrapping_add(instruction.bytes as u16 - 1);
         }
     }
+    
     fn fetch(&mut self) -> u8 {
         let opcode = self.memory[self.program_counter as usize];
         self.program_counter = self.program_counter.wrapping_add(1);
@@ -110,234 +106,65 @@ impl CPU {
         }
     }
 
-    fn execute(&mut self, instruction: Instruction) -> Result<(), InstructionExecutionError> {
+    fn execute(&mut self, instruction: Instruction) {
         match instruction.name {
-            "ADC" => {
-                self.adc(&instruction.addressing_mode);
-                Ok(())
-            }
-            "AND" => {
-                self.and(&instruction.addressing_mode);
-                Ok(())
-            }
-            "ASL" => {
-                self.asl(&instruction.addressing_mode);
-                Ok(())
-            }
-            "BCC" => {
-                self.bcc();
-                Ok(())
-            }
-            "BCS" => {
-                self.bcs();
-                Ok(())
-            }
-            "BEQ" => {
-                self.beq();
-                Ok(())
-            }
-            "BIT" => {
-                self.bit(&instruction.addressing_mode);
-                Ok(())
-            }
-            "BMI" => {
-                self.bmi();
-                Ok(())
-            }
-            "BNE" => {
-                self.bne();
-                Ok(())
-            }
-            "BPL" => {
-                self.bpl();
-                Ok(())
-            }
-            "BVC" => {
-                self.bvc();
-                Ok(())
-            }
-            "BVS" => {
-                self.bvs();
-                Ok(())
-            }
-            "CLC" => {
-                self.clc();
-                Ok(())
-            }
-            "CLD" => {
-                self.cld();
-                Ok(())
-            }
-            "CLI" => {
-                self.cli();
-                Ok(())
-            }
-            "CLV" => {
-                self.clv();
-                Ok(())
-            }
-            "CMP" => {
-                self.cmp(&instruction.addressing_mode);
-                Ok(())
-            }
-            "CPX" => {
-                self.cpx(&instruction.addressing_mode);
-                Ok(())
-            }
-            "CPY" => {
-                self.cpy(&instruction.addressing_mode);
-                Ok(())
-            }
-            "DEC" => {
-                self.dec(&instruction.addressing_mode);
-                Ok(())
-            }
-            "DEX" => {
-                self.dex();
-                Ok(())
-            }
-            "DEY" => {
-                self.dey();
-                Ok(())
-            }
-            "EOR" => {
-                self.eor(&instruction.addressing_mode);
-                Ok(())
-            }
-            "BRK" => {
-                self.brk();
-                Ok(())
-            }
-            "LDA" => {
-                self.lda(&instruction.addressing_mode);
-                Ok(())
-            }
-            "LDX" => {
-                self.ldx(&instruction.addressing_mode);
-                Ok(())
-            }
-            "LDY" => {
-                self.ldy(&instruction.addressing_mode);
-                Ok(())
-            }
-            "LSR" => {
-                self.lsr(&instruction.addressing_mode);
-                Ok(())
-            }
-            "NOP" => Ok(()),
-            "JMP" => {
-                self.jmp(&instruction.addressing_mode);
-                Ok(())
-            }
-            "JSR" => {
-                self.jsr(&instruction.addressing_mode);
-                Ok(())
-            }
-            "ORA" => {
-                self.ora(&instruction.addressing_mode);
-                Ok(())
-            
-            }
-            "PHA" => {
-                self.pha();
-                Ok(())
-            }
-            "PHP" => {
-                self.php();
-                Ok(())
-            }
-            "PLA" => {
-                self.pla();
-                Ok(())
-            }
-            "PLP" => {
-                self.plp();
-                Ok(())
-            }
-            "INC" => {
-                self.inc(&instruction.addressing_mode);
-                Ok(())
-            }
-            "INX" => {
-                self.inx();
-                Ok(())
-            }
-            "INY" => {
-                self.iny();
-                Ok(())
-            }
-            "ROL" => {
-                self.rol(&instruction.addressing_mode);
-                Ok(())
-            }
-            "ROR" => {
-                self.ror(&instruction.addressing_mode);
-                Ok(())
-            
-            }
-            "RTI" => {
-                self.rti();
-                Ok(())
-            }
-            "RTS" => {
-                self.rts();
-                Ok(())
-            }
-            "SBC" => {
-                self.sbc(&instruction.addressing_mode);
-                Ok(())
-            }
-            "SEC" => {
-                self.sec();
-                Ok(())
-            }
-            "SED" => {
-                self.sed();
-                Ok(())
-            }
-            "SEI" => {
-                self.sei();
-                Ok(())
-            }
-            "STA" => {
-                self.sta(&instruction.addressing_mode);
-                Ok(())
-            }
-            "STX" => {
-                self.stx(&instruction.addressing_mode);
-                Ok(())
-            }
-            "STY" => {
-                self.sty(&instruction.addressing_mode);
-                Ok(())
-            }
-            "TAX" => {
-                self.tax();
-                Ok(())
-            }
-            "TAY" => {
-                self.tay();
-                Ok(())
-            }
-            "TSX" => {
-                self.tsx();
-                Ok(())
-            }
-            "TXA" => {
-                self.txa();
-                Ok(())
-            }
-            "TXS" => {
-                self.txs();
-                Ok(())
-            }
-            "TYA" => {
-                self.tya();
-                Ok(())
-            }
-            _ => {
-                todo!();
-            }
+            "ADC" => self.adc(&instruction.addressing_mode),
+            "AND" => self.and(&instruction.addressing_mode),
+            "ASL" => self.asl(&instruction.addressing_mode),
+            "BCC" => self.bcc(),
+            "BCS" => self.bcs(),
+            "BEQ" => self.beq(),
+            "BIT" => self.bit(&instruction.addressing_mode),
+            "BMI" => self.bmi(),
+            "BNE" => self.bne(),
+            "BPL" => self.bpl(),
+            "BVC" => self.bvc(),
+            "BVS" => self.bvs(),
+            "CLC" => self.clc(),
+            "CLD" => self.cld(),
+            "CLI" => self.cli(),
+            "CLV" => self.clv(),
+            "CMP" => self.cmp(&instruction.addressing_mode),
+            "CPX" => self.cpx(&instruction.addressing_mode),
+            "CPY" => self.cpy(&instruction.addressing_mode),
+            "DEC" => self.dec(&instruction.addressing_mode),
+            "DEX" => self.dex(),
+            "DEY" => self.dey(),
+            "EOR" => self.eor(&instruction.addressing_mode),
+            "BRK" => self.brk(),
+            "LDA" => self.lda(&instruction.addressing_mode),
+            "LDX" => self.ldx(&instruction.addressing_mode),
+            "LDY" => self.ldy(&instruction.addressing_mode),
+            "LSR" => self.lsr(&instruction.addressing_mode),
+            "NOP" => (),
+            "JMP" => self.jmp(&instruction.addressing_mode),
+            "JSR" => self.jsr(&instruction.addressing_mode),
+            "ORA" => self.ora(&instruction.addressing_mode),
+            "PHA" => self.pha(),
+            "PHP" => self.php(),
+            "PLA" => self.pla(),
+            "PLP" => self.plp(),
+            "INC" => self.inc(&instruction.addressing_mode),
+            "INX" => self.inx(),
+            "INY" => self.iny(),
+            "ROL" => self.rol(&instruction.addressing_mode),
+            "ROR" => self.ror(&instruction.addressing_mode),
+            "RTI" => self.rti(),
+            "RTS" => self.rts(),
+            "SBC" => self.sbc(&instruction.addressing_mode),
+            "SEC" => self.sec(),
+            "SED" => self.sed(),
+            "SEI" => self.sei(),
+            "STA" => self.sta(&instruction.addressing_mode),
+            "STX" => self.stx(&instruction.addressing_mode),
+            "STY" => self.sty(&instruction.addressing_mode),
+            "TAX" => self.tax(),
+            "TAY" => self.tay(),
+            "TSX" => self.tsx(),
+            "TXA" => self.txa(),
+            "TXS" => self.txs(),
+            "TYA" => self.tya(),
+            _ => panic!()
         }
     }
 
@@ -403,9 +230,7 @@ impl CPU {
         let bytes = data.to_le_bytes();
         let index = address as usize;
         self.memory[index] = bytes[0];
-        println!("Writing {:#01x} to address {:#01x}", bytes[0], index);
         self.memory[index + 1] = bytes[1];
-        println!("Writing {:#01x} to address {:#01x}", bytes[1], index + 1); // TODO: wrapping add
     }
 
     fn get_flag_state(&self, mask: u8) -> FlagStates {
@@ -466,17 +291,6 @@ impl CPU {
                     .mem_read(self.program_counter)
                     .wrapping_add(self.register_x);
                 self.zero_page_read_u16(indirect_address)
-            }
-            AddressingMode::Indexed_Indirect_Y => {
-                let indirect_address = self
-                    .mem_read(self.program_counter)
-                    .wrapping_add(self.register_y);
-                self.zero_page_read_u16(indirect_address)
-            }
-            AddressingMode::Indirect_indexed_X => {
-                let indirect_address = self.mem_read(self.program_counter);
-                self.zero_page_read_u16(indirect_address)
-                    .wrapping_add(self.register_x as u16)
             }
             AddressingMode::Indirect_indexed_Y => {
                 let indirect_address = self.mem_read(self.program_counter);
@@ -854,7 +668,7 @@ impl CPU {
 
     fn pla(&mut self) {
         self.register_a = self.stack_pop();
-        
+
         self.update_zero_flag(self.register_a);
         self.update_negative_flag(self.register_a);
     }
@@ -1532,29 +1346,6 @@ mod test_cpu {
         cpu.register_x = 0x01;
         let result = cpu.get_operand_address(&AddressingMode::Indexed_Indirect_X);
         assert_eq!(result, 0xBAFC);
-    }
-
-    #[test]
-    fn test_addressing_mode_indexed_indirect_y() {
-        let mut cpu = CPU::new();
-        cpu.program_counter = 0x8000;
-        cpu.mem_write(0x8000, 0x20);
-        cpu.mem_write_u16(0x0021, 0xBAFC);
-        cpu.register_y = 0x01;
-        let result = cpu.get_operand_address(&AddressingMode::Indexed_Indirect_Y);
-        assert_eq!(result, 0xBAFC);
-    }
-
-    #[test]
-    fn test_addressing_mode_indirect_indexed_x() {
-        let mut cpu = CPU::new();
-        cpu.program_counter = 0x8000;
-        cpu.mem_write(0x8000, 0x52);
-        cpu.mem_write_u16(0x0052, 0xEF05);
-        cpu.register_x = 0x03;
-
-        let result = cpu.get_operand_address(&AddressingMode::Indirect_indexed_X);
-        assert_eq!(result, 0xEF08);
     }
 
     #[test]
