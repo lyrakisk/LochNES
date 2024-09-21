@@ -319,6 +319,10 @@ impl CPU {
                 self.tay();
                 Ok(())
             }
+            "TSX" => {
+                self.tsx();
+                Ok(())
+            }
             "TXA" => {
                 self.txa();
                 Ok(())
@@ -1024,6 +1028,11 @@ impl CPU {
         self.update_negative_flag(self.register_y);
     }
 
+    fn tsx(&mut self) {
+        self.register_x = self.stack_pointer;
+        self.update_zero_flag(self.register_x);
+        self.update_negative_flag(self.register_x);
+    }
     fn txa(&mut self) {
         self.register_a = self.register_x;
         self.update_zero_flag(self.register_a);
@@ -1644,6 +1653,7 @@ mod test_cpu {
     #[test_case("submodules/65x02/nes6502/v1/b0.json")]
     #[test_case("submodules/65x02/nes6502/v1/b5.json")]
     #[test_case("submodules/65x02/nes6502/v1/b6.json")]
+    #[test_case("submodules/65x02/nes6502/v1/ba.json")]
     #[test_case("submodules/65x02/nes6502/v1/be.json")]
     #[test_case("submodules/65x02/nes6502/v1/c0.json")]
     #[test_case("submodules/65x02/nes6502/v1/c1.json")]

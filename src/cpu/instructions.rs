@@ -190,6 +190,7 @@ pub static INSTRUCTIONS: Lazy<HashMap<u8, Instruction>> = Lazy::new(|| {
         Instruction {opcode: 0x8C, name: "STY", bytes: 3, addressing_mode: AddressingMode::Absolute},
         Instruction {opcode: 0xAA, name: "TAX", bytes: 1, addressing_mode: AddressingMode::Implicit},
         Instruction {opcode: 0xA8, name: "TAY", bytes: 1, addressing_mode: AddressingMode::Implicit},
+        Instruction {opcode: 0xBA, name: "TSX", bytes: 1, addressing_mode: AddressingMode::Implicit},
         Instruction {opcode: 0x8A, name: "TXA", bytes: 1, addressing_mode: AddressingMode::Implicit},
         ]
     .into_iter()
