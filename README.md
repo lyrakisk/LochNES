@@ -2,20 +2,11 @@
 A (soon to be) fully-featured NES emulator written in Rust. 
 
 ## Roadmap
+- [X] CPU
+- [ ] Bus
+- [ ] PPU
+- [ ] APU
 
-### Addressing modes
-- [x] Implicit
-- [x] Accumulator
-- [x] Immediate
-- [x] Zero Page
-- [x] Zero Page, X
-- [x] Zero Page, Y
-- [x] Absolute
-- [x] Absolute, X
-- [x] Absolute, Y
-- [x] Indirect
-- [x] Indexed Indirect
-- [x] Indirect Indexed
 ### Instructions
 - [X] ADC
 - [X] AND
@@ -72,7 +63,7 @@ A (soon to be) fully-featured NES emulator written in Rust.
 - [X] TSX
 - [X] TXA
 - [X] TXS
-- [ ] TYA
+- [X] TYA
 
 ### Illegal Opcodes
 At the moment, the emulator does not implement any illegal opcodes. If it encounters one, it will ignore it.
