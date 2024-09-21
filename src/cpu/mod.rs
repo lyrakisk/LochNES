@@ -273,6 +273,11 @@ impl CPU {
             "ROR" => {
                 self.ror(&instruction.addressing_mode);
                 Ok(())
+            
+            }
+            "RTI" => {
+                self.rti();
+                Ok(())
             }
             "RTS" => {
                 self.rts();
@@ -922,6 +927,11 @@ impl CPU {
         }
     }
 
+    fn rti(&mut self) {
+        self.status = self.stack_pop() | 0b0010_0000 & 0b1110_1111;
+        self.program_counter = self.stack_pop_u16().wrapping_sub(1);
+        self.clear_flag(STATUS_FLAG_MASK_BREAK_COMMAND);
+    }
     fn rts(&mut self) {
         self.program_counter = self.stack_pop_u16();
     }
@@ -1549,6 +1559,7 @@ mod test_cpu {
     #[test_case("submodules/65x02/nes6502/v1/39.json")]
     #[test_case("submodules/65x02/nes6502/v1/3d.json")]
     #[test_case("submodules/65x02/nes6502/v1/3e.json")]
+    #[test_case("submodules/65x02/nes6502/v1/40.json")]
     #[test_case("submodules/65x02/nes6502/v1/41.json")]
     #[test_case("submodules/65x02/nes6502/v1/45.json")]
     #[test_case("submodules/65x02/nes6502/v1/46.json")]

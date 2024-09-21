@@ -58,7 +58,7 @@ A (soon to be) fully-featured NES emulator written in Rust.
 - [X] PLP
 - [X] ROL
 - [X] ROR
-- [ ] RTI
+- [X] RTI
 - [X] RTS
 - [X] SBC
 - [X] SEC
