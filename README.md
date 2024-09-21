@@ -32,7 +32,7 @@ A (soon to be) fully-featured NES emulator written in Rust.
 - [X] BVS
 - [X] CLC
 - [X] CLD
-- [ ] CLI
+- [X] CLI
 - [X] CLV
 - [X] CMP
 - [X] CPX

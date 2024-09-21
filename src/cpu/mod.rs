@@ -168,6 +168,10 @@ impl CPU {
                 self.cld();
                 Ok(())
             }
+            "CLI" => {
+                self.cli();
+                Ok(())
+            }
             "CLV" => {
                 self.clv();
                 Ok(())
@@ -643,6 +647,9 @@ impl CPU {
         self.clear_flag(STATUS_FLAG_MASK_DECIMAL);
     }
 
+    fn cli(&mut self) {
+        self.clear_flag(STATUS_FLAG_INTERRUPT_DISABLE);
+    }
     fn clv(&mut self) {
         self.clear_flag(STATUS_FLAG_MASK_OVERFLOW);
     }
@@ -1453,6 +1460,7 @@ mod test_cpu {
     #[test_case("submodules/65x02/nes6502/v1/51.json")]
     #[test_case("submodules/65x02/nes6502/v1/55.json")]
     #[test_case("submodules/65x02/nes6502/v1/56.json")]
+    #[test_case("submodules/65x02/nes6502/v1/58.json")]
     #[test_case("submodules/65x02/nes6502/v1/59.json")]
     #[test_case("submodules/65x02/nes6502/v1/5d.json")]
     #[test_case("submodules/65x02/nes6502/v1/5e.json")]
