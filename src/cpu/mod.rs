@@ -67,18 +67,16 @@ impl CPU {
     fn execute_next_instruction(&mut self) -> Result<(), u8> {
         let opcode = self.fetch();
 
-        let instruction = self.decode(opcode);
+        let decoded_opcode = self.decode(opcode);
 
-        if instruction.is_none() {
-            return Err(1);
+        match decoded_opcode {
+            None => panic!(),
+            Some(instruction) => {
+                self.execute(instruction.clone());
+                self.update_program_counter(instruction);
+                Ok(())
+            }
         }
-
-        let instruction_unwrapped = instruction.unwrap();
-
-        self.execute(instruction_unwrapped.clone());
-
-        self.update_program_counter(instruction_unwrapped);
-        Ok(())
     }
 
     fn update_program_counter(&mut self, instruction: Instruction) {
@@ -91,7 +89,7 @@ impl CPU {
                 .wrapping_add(instruction.bytes as u16 - 1);
         }
     }
-    
+
     fn fetch(&mut self) -> u8 {
         let opcode = self.memory[self.program_counter as usize];
         self.program_counter = self.program_counter.wrapping_add(1);
@@ -164,7 +162,7 @@ impl CPU {
             "TXA" => self.txa(),
             "TXS" => self.txs(),
             "TYA" => self.tya(),
-            _ => panic!()
+            _ => panic!(),
         }
     }
 
