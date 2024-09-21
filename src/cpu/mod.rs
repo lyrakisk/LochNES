@@ -236,6 +236,11 @@ impl CPU {
             "ORA" => {
                 self.ora(&instruction.addressing_mode);
                 Ok(())
+            
+            }
+            "PHA" => {
+                self.pha();
+                Ok(())
             }
             "PHP" => {
                 self.php();
@@ -793,6 +798,10 @@ impl CPU {
         self.register_a = self.register_a | operand;
         self.update_zero_flag(self.register_a);
         self.update_negative_flag(self.register_a);
+    }
+
+    fn pha(&mut self) {
+        self.stack_push(self.register_a);
     }
 
     fn php(&mut self) {
@@ -1492,6 +1501,7 @@ mod test_cpu {
     #[test_case("submodules/65x02/nes6502/v1/41.json")]
     #[test_case("submodules/65x02/nes6502/v1/45.json")]
     #[test_case("submodules/65x02/nes6502/v1/46.json")]
+    #[test_case("submodules/65x02/nes6502/v1/48.json")]
     #[test_case("submodules/65x02/nes6502/v1/49.json")]
     #[test_case("submodules/65x02/nes6502/v1/4a.json")]
     #[test_case("submodules/65x02/nes6502/v1/4c.json")]

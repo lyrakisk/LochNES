@@ -52,7 +52,7 @@ A (soon to be) fully-featured NES emulator written in Rust.
 - [X] LSR
 - [X] NOP
 - [X] ORA
-- [ ] PHA
+- [X] PHA
 - [X] PHP
 - [ ] PLA
 - [X] PLP
