@@ -53,28 +53,20 @@ impl CPU {
 
     pub fn run(&mut self) {
         loop {
-            match self.execute_next_instruction() {
-                Err(_) => {
-                    return;
-                }
-                Ok(()) => {
-                    continue;
-                }
-            }
+            self.execute_next_instruction();
         }
     }
 
-    fn execute_next_instruction(&mut self) -> Result<(), u8> {
+    fn execute_next_instruction(&mut self) {
         let opcode = self.fetch();
 
         let decoded_opcode = self.decode(opcode);
 
         match decoded_opcode {
-            None => panic!(),
+            None => panic!("Could not decode opcode {opcode}"),
             Some(instruction) => {
                 self.execute(instruction.clone());
                 self.update_program_counter(instruction);
-                Ok(())
             }
         }
     }
