@@ -71,7 +71,7 @@ A (soon to be) fully-featured NES emulator written in Rust.
 - [X] TAY
 - [X] TSX
 - [X] TXA
-- [ ] TXS
+- [X] TXS
 - [ ] TYA
 
 ### Illegal Opcodes
