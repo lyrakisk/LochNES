@@ -253,6 +253,10 @@ impl CPU {
                 self.inx();
                 Ok(())
             }
+            "INY" => {
+                self.iny();
+                Ok(())
+            }
             "ROL" => {
                 self.rol(&instruction.addressing_mode);
                 Ok(())
@@ -814,6 +818,12 @@ impl CPU {
         self.register_x = self.register_x.wrapping_add(1);
         self.update_zero_flag(self.register_x);
         self.update_negative_flag(self.register_x);
+    }
+
+    fn iny(&mut self) {
+        self.register_y = self.register_y.wrapping_add(1);
+        self.update_zero_flag(self.register_y);
+        self.update_negative_flag(self.register_y);
     }
 
     fn rol(&mut self, addressing_mode: &AddressingMode) {
@@ -1533,6 +1543,7 @@ mod test_cpu {
     #[test_case("submodules/65x02/nes6502/v1/c4.json")]
     #[test_case("submodules/65x02/nes6502/v1/c5.json")]
     #[test_case("submodules/65x02/nes6502/v1/c6.json")]
+    #[test_case("submodules/65x02/nes6502/v1/c8.json")]
     #[test_case("submodules/65x02/nes6502/v1/c9.json")]
     #[test_case("submodules/65x02/nes6502/v1/ca.json")]
     #[test_case("submodules/65x02/nes6502/v1/cc.json")]
