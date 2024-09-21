@@ -5,6 +5,7 @@ use crate::cpu::instructions::*;
 const STATUS_FLAG_MASK_NEGATIVE: u8 = 0b10000000;
 const STATUS_FLAG_MASK_OVERFLOW: u8 = 0b01000000;
 const STATUS_FLAG_MASK_BREAK_COMMAND: u8 = 0b0001_0000;
+const STATUS_FLAG_MASK_DECIMAL: u8 = 0b0000_1000;
 const STATUS_FLAG_INTERRUPT_DISABLE: u8 = 0b0000_0100;
 const STATUS_FLAG_MASK_ZERO: u8 = 0b00000010;
 const STATUS_FLAG_MASK_CARRY: u8 = 0b00000001;
@@ -163,6 +164,10 @@ impl CPU {
                 self.clc();
                 Ok(())
             }
+            "CLD" => {
+                self.cld();
+                Ok(())
+            }
             "CLV" => {
                 self.clv();
                 Ok(())
@@ -281,7 +286,6 @@ impl CPU {
     fn load(&mut self, program: Vec<u8>) {
         self.memory[0x8000..(0x8000 + program.len())].copy_from_slice(&program[..]);
         self.mem_write_u16(0xFFFC, 0x8000);
-        // Should this also update the program counter?
     }
 
     fn stack_pop(&mut self) -> u8 {
@@ -311,11 +315,11 @@ impl CPU {
 
     // consider returning reference to memory instead of copying,
     // because some instructions need to update it in place
-    fn mem_read(&self, address: u16) -> u8 {
+    pub fn mem_read(&self, address: u16) -> u8 {
         return self.memory[address as usize];
     }
 
-    fn mem_write(&mut self, address: u16, data: u8) {
+    pub fn mem_write(&mut self, address: u16, data: u8) {
         self.memory[address as usize] = data;
     }
 
@@ -633,6 +637,10 @@ impl CPU {
 
     fn clc(&mut self) {
         self.clear_flag(STATUS_FLAG_MASK_CARRY);
+    }
+
+    fn cld(&mut self) {
+        self.clear_flag(STATUS_FLAG_MASK_DECIMAL);
     }
 
     fn clv(&mut self) {
@@ -1492,6 +1500,7 @@ mod test_cpu {
     #[test_case("submodules/65x02/nes6502/v1/d1.json")]
     #[test_case("submodules/65x02/nes6502/v1/d5.json")]
     #[test_case("submodules/65x02/nes6502/v1/d6.json")]
+    #[test_case("submodules/65x02/nes6502/v1/d8.json")]
     #[test_case("submodules/65x02/nes6502/v1/d9.json")]
     #[test_case("submodules/65x02/nes6502/v1/dd.json")]
     #[test_case("submodules/65x02/nes6502/v1/de.json")]

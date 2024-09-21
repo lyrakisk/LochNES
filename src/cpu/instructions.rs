@@ -76,6 +76,7 @@ pub static INSTRUCTIONS: Lazy<HashMap<u8, Instruction>> = Lazy::new(|| {
         Instruction {opcode: 0x50, name: "BVC", bytes: 2, addressing_mode: AddressingMode::Relative},
         Instruction {opcode: 0x70, name: "BVS", bytes: 2, addressing_mode: AddressingMode::Relative},
         Instruction {opcode: 0x18, name: "CLC", bytes: 1, addressing_mode: AddressingMode::Implicit},
+        Instruction {opcode: 0xD8, name: "CLD", bytes: 1, addressing_mode: AddressingMode::Implicit},
         Instruction {opcode: 0xB8, name: "CLV", bytes: 1, addressing_mode: AddressingMode::Implicit},
         Instruction {opcode: 0xC9, name: "CMP", bytes: 2, addressing_mode: AddressingMode::Immediate},
         Instruction {opcode: 0xC5, name: "CMP", bytes: 2, addressing_mode: AddressingMode::ZeroPage},
