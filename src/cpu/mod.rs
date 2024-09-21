@@ -184,6 +184,10 @@ impl CPU {
                 self.cpx(&instruction.addressing_mode);
                 Ok(())
             }
+            "CPY" => {
+                self.cpy(&instruction.addressing_mode);
+                Ok(())
+            }
             "DEC" => {
                 self.dec(&instruction.addressing_mode);
                 Ok(())
@@ -670,9 +674,25 @@ impl CPU {
     }
 
     fn cpx(&mut self, addressing_mode: &AddressingMode) {
-        // code duplication, almost similar to cmp()
+        // todo: remove code duplication, almost similar to cmp, cpy
         let (result, overflow_occured) = self
             .register_x
+            .overflowing_sub(self.get_operand(&addressing_mode));
+
+        if overflow_occured {
+            self.clear_flag(STATUS_FLAG_MASK_CARRY);
+        } else {
+            self.set_flag(STATUS_FLAG_MASK_CARRY);
+        }
+
+        self.update_zero_flag(result);
+        self.update_negative_flag(result);
+    }
+
+    fn cpy(&mut self, addressing_mode: &AddressingMode) {
+        // todo: remove code duplication, almost similar to cmp, cpx
+        let (result, overflow_occured) = self
+            .register_y
             .overflowing_sub(self.get_operand(&addressing_mode));
 
         if overflow_occured {
@@ -1497,11 +1517,14 @@ mod test_cpu {
     #[test_case("submodules/65x02/nes6502/v1/b5.json")]
     #[test_case("submodules/65x02/nes6502/v1/b6.json")]
     #[test_case("submodules/65x02/nes6502/v1/be.json")]
+    #[test_case("submodules/65x02/nes6502/v1/c0.json")]
     #[test_case("submodules/65x02/nes6502/v1/c1.json")]
+    #[test_case("submodules/65x02/nes6502/v1/c4.json")]
     #[test_case("submodules/65x02/nes6502/v1/c5.json")]
     #[test_case("submodules/65x02/nes6502/v1/c6.json")]
     #[test_case("submodules/65x02/nes6502/v1/c9.json")]
     #[test_case("submodules/65x02/nes6502/v1/ca.json")]
+    #[test_case("submodules/65x02/nes6502/v1/cc.json")]
     #[test_case("submodules/65x02/nes6502/v1/cd.json")]
     #[test_case("submodules/65x02/nes6502/v1/ce.json")]
     #[test_case("submodules/65x02/nes6502/v1/d0.json")]
