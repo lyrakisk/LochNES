@@ -39,7 +39,7 @@ A (soon to be) fully-featured NES emulator written in Rust.
 - [X] CPY
 - [X] DEC
 - [X] DEX
-- [ ] DEY
+- [X] DEY
 - [X] EOR
 - [X] INC
 - [X] INX

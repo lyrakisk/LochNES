@@ -196,6 +196,10 @@ impl CPU {
                 self.dex();
                 Ok(())
             }
+            "DEY" => {
+                self.dey();
+                Ok(())
+            }
             "EOR" => {
                 self.eor(&instruction.addressing_mode);
                 Ok(())
@@ -717,6 +721,12 @@ impl CPU {
         self.register_x = self.register_x.wrapping_sub(1);
         self.update_zero_flag(self.register_x);
         self.update_negative_flag(self.register_x);
+    }
+
+    fn dey(&mut self) {
+        self.register_y = self.register_y.wrapping_sub(1);
+        self.update_zero_flag(self.register_y);
+        self.update_negative_flag(self.register_y);
     }
 
     fn eor(&mut self, addressing_mode: &AddressingMode) {
@@ -1497,6 +1507,7 @@ mod test_cpu {
     #[test_case("submodules/65x02/nes6502/v1/81.json")]
     #[test_case("submodules/65x02/nes6502/v1/84.json")]
     #[test_case("submodules/65x02/nes6502/v1/85.json")]
+    #[test_case("submodules/65x02/nes6502/v1/88.json")]
     #[test_case("submodules/65x02/nes6502/v1/8a.json")]
     #[test_case("submodules/65x02/nes6502/v1/8c.json")]
     #[test_case("submodules/65x02/nes6502/v1/8d.json")]
