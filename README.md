@@ -62,7 +62,7 @@ A (soon to be) fully-featured NES emulator written in Rust.
 - [X] RTS
 - [X] SBC
 - [X] SEC
-- [ ] SED
+- [X] SED
 - [ ] SEI
 - [X] STA
 - [ ] STX
