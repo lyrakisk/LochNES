@@ -246,6 +246,10 @@ impl CPU {
                 self.php();
                 Ok(())
             }
+            "PLA" => {
+                self.pla();
+                Ok(())
+            }
             "PLP" => {
                 self.plp();
                 Ok(())
@@ -813,6 +817,13 @@ impl CPU {
         // NesDev reference says that this flag should be set from stack,
         // but the test suite only passes if I clear it here.
         self.clear_flag(STATUS_FLAG_MASK_BREAK_COMMAND);
+    }
+
+    fn pla(&mut self) {
+        self.register_a = self.stack_pop();
+        
+        self.update_zero_flag(self.register_a);
+        self.update_negative_flag(self.register_a);
     }
 
     fn inc(&mut self, addressing_mode: &AddressingMode) {
@@ -1517,6 +1528,7 @@ mod test_cpu {
     #[test_case("submodules/65x02/nes6502/v1/60.json")]
     #[test_case("submodules/65x02/nes6502/v1/61.json")]
     #[test_case("submodules/65x02/nes6502/v1/65.json")]
+    #[test_case("submodules/65x02/nes6502/v1/68.json")]
     #[test_case("submodules/65x02/nes6502/v1/69.json")]
     #[test_case("submodules/65x02/nes6502/v1/6c.json")]
     #[test_case("submodules/65x02/nes6502/v1/6d.json")]
