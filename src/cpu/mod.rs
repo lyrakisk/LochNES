@@ -270,6 +270,10 @@ impl CPU {
                 self.rol(&instruction.addressing_mode);
                 Ok(())
             }
+            "ROR" => {
+                self.ror(&instruction.addressing_mode);
+                Ok(())
+            }
             "RTS" => {
                 self.rts();
                 Ok(())
@@ -876,6 +880,42 @@ impl CPU {
         self.update_negative_flag(result);
 
         if operand_most_significant_bit == 1 {
+            self.set_flag(STATUS_FLAG_MASK_CARRY);
+        } else {
+            self.clear_flag(STATUS_FLAG_MASK_CARRY);
+        }
+    }
+
+    fn ror(&mut self, addressing_mode: &AddressingMode) {
+        let carry = self.get_flag_state(STATUS_FLAG_MASK_CARRY);
+
+        let operand: &mut u8;
+        match addressing_mode {
+            AddressingMode::Accumulator => {
+                operand = &mut self.register_a;
+            }
+            _ => {
+                let index = self.get_operand_address(addressing_mode) as usize;
+                operand = &mut self.memory[index];
+            }
+        }
+        let operand_least_significant_bit = ((*operand) & 0b0000_0001);
+        let mut result = *operand >> 1;
+
+        match carry {
+            FlagStates::SET => {
+                result = result | 0b1000_0000;
+            }
+            FlagStates::CLEAR => {
+                result = result & 0b0111_1111;
+            }
+        }
+        *operand = result;
+
+        self.update_zero_flag(result);
+        self.update_negative_flag(result);
+
+        if operand_least_significant_bit == 1 {
             self.set_flag(STATUS_FLAG_MASK_CARRY);
         } else {
             self.clear_flag(STATUS_FLAG_MASK_CARRY);
@@ -1528,14 +1568,19 @@ mod test_cpu {
     #[test_case("submodules/65x02/nes6502/v1/60.json")]
     #[test_case("submodules/65x02/nes6502/v1/61.json")]
     #[test_case("submodules/65x02/nes6502/v1/65.json")]
+    #[test_case("submodules/65x02/nes6502/v1/66.json")]
     #[test_case("submodules/65x02/nes6502/v1/68.json")]
     #[test_case("submodules/65x02/nes6502/v1/69.json")]
+    #[test_case("submodules/65x02/nes6502/v1/6a.json")]
     #[test_case("submodules/65x02/nes6502/v1/6c.json")]
     #[test_case("submodules/65x02/nes6502/v1/6d.json")]
+    #[test_case("submodules/65x02/nes6502/v1/6e.json")]
     #[test_case("submodules/65x02/nes6502/v1/71.json")]
     #[test_case("submodules/65x02/nes6502/v1/75.json")]
+    #[test_case("submodules/65x02/nes6502/v1/76.json")]
     #[test_case("submodules/65x02/nes6502/v1/79.json")]
     #[test_case("submodules/65x02/nes6502/v1/7d.json")]
+    #[test_case("submodules/65x02/nes6502/v1/7e.json")]
     #[test_case("submodules/65x02/nes6502/v1/81.json")]
     #[test_case("submodules/65x02/nes6502/v1/84.json")]
     #[test_case("submodules/65x02/nes6502/v1/85.json")]
