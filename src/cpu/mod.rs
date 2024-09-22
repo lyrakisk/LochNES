@@ -16,9 +16,6 @@ enum FlagStates {
     SET = 1,
 }
 
-enum InstructionExecutionError {
-    INTERRUPT_HANDLING_NOT_IMPLEMENTED,
-}
 
 #[derive(Clone, Debug)]
 pub struct CPU {
