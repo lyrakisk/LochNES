@@ -1,6 +1,9 @@
 mod instructions;
 
+use crate::bus::*;
 use crate::cpu::instructions::*;
+
+use std::sync::{Arc, Mutex};
 
 const STATUS_FLAG_MASK_NEGATIVE: u8 = 0b10000000;
 const STATUS_FLAG_MASK_OVERFLOW: u8 = 0b01000000;
@@ -16,8 +19,7 @@ enum FlagStates {
     SET = 1,
 }
 
-
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct CPU {
     pub register_a: u8,
     pub register_x: u8,
@@ -25,11 +27,11 @@ pub struct CPU {
     pub status: u8,
     pub program_counter: u16,
     pub stack_pointer: u8,
-    memory: [u8; 65536],
+    bus: Arc<Mutex<Bus>>,
 }
 
 impl CPU {
-    pub fn new() -> Self {
+    pub fn new(bus: Arc<Mutex<Bus>>) -> Self {
         CPU {
             register_a: 0,
             register_x: 0, // todo: check reference, should this be initialized?
@@ -37,7 +39,7 @@ impl CPU {
             status: 0, // todo: according to nesdev wiki, the 5th bit is always 1, https://www.nesdev.org/wiki/Status_flags
             program_counter: 0x8000,
             stack_pointer: 0xFF,
-            memory: [0; 65536], // should everything be initialized to zero?
+            bus: bus,
         }
     }
 
@@ -45,7 +47,7 @@ impl CPU {
         self.register_a = 0;
         self.register_x = 0;
         self.status = 0;
-        self.program_counter = self.mem_read_u16(0xFFFC);
+        self.program_counter = self.bus.lock().unwrap().mem_read_u16(0xFFFC);
     }
 
     pub fn run(&mut self) {
@@ -80,7 +82,7 @@ impl CPU {
     }
 
     fn fetch(&mut self) -> u8 {
-        let opcode = self.memory[self.program_counter as usize];
+        let opcode = self.bus.lock().unwrap().mem_read(self.program_counter);
         self.program_counter = self.program_counter.wrapping_add(1);
         return opcode;
     }
@@ -155,69 +157,55 @@ impl CPU {
         }
     }
 
-    fn load(&mut self, program: Vec<u8>) {
-        self.memory[0x8000..(0x8000 + program.len())].copy_from_slice(&program[..]);
-        self.mem_write_u16(0xFFFC, 0x8000);
-    }
+    // fn load(&mut self, program: Vec<u8>) {
+    //     self.memory[0x8000..(0x8000 + program.len())].copy_from_slice(&program[..]);
+    //     self.bus.lock().unwrap().mem_write_u16(0xFFFC, 0x8000);
+    // }
 
     fn stack_pop(&mut self) -> u8 {
         self.stack_pointer = self.stack_pointer.wrapping_add(1);
-        return self.mem_read(0x0100 + (self.stack_pointer as u16));
+        return self
+            .bus
+            .lock()
+            .unwrap()
+            .mem_read(0x0100 + (self.stack_pointer as u16));
     }
     fn stack_pop_u16(&mut self) -> u16 {
         self.stack_pointer = self.stack_pointer.wrapping_add(1);
-        let low_order_byte = self.mem_read(0x0100 + (self.stack_pointer as u16));
+        let low_order_byte = self
+            .bus
+            .lock()
+            .unwrap()
+            .mem_read(0x0100 + (self.stack_pointer as u16));
         self.stack_pointer = self.stack_pointer.wrapping_add(1);
-        let high_order_byte = self.mem_read(0x0100 + (self.stack_pointer as u16));
+        let high_order_byte = self
+            .bus
+            .lock()
+            .unwrap()
+            .mem_read(0x0100 + (self.stack_pointer as u16));
 
         return u16::from_le_bytes([low_order_byte, high_order_byte]).wrapping_add(1);
     }
 
     fn stack_push(&mut self, data: u8) {
-        self.mem_write(0x0100 + (self.stack_pointer as u16), data);
+        self.bus
+            .lock()
+            .unwrap()
+            .mem_write(0x0100 + (self.stack_pointer as u16), data);
         self.stack_pointer = self.stack_pointer.wrapping_sub(1);
     }
     fn stack_push_u16(&mut self, data: u16) {
         let bytes = data.to_le_bytes();
-        self.mem_write(0x0100 + (self.stack_pointer as u16), bytes[1]);
+        self.bus
+            .lock()
+            .unwrap()
+            .mem_write(0x0100 + (self.stack_pointer as u16), bytes[1]);
         self.stack_pointer = self.stack_pointer.wrapping_sub(1);
-        self.mem_write(0x0100 + (self.stack_pointer as u16), bytes[0]);
+        self.bus
+            .lock()
+            .unwrap()
+            .mem_write(0x0100 + (self.stack_pointer as u16), bytes[0]);
         self.stack_pointer = self.stack_pointer.wrapping_sub(1);
-    }
-
-    // consider returning reference to memory instead of copying,
-    // because some instructions need to update it in place
-    pub fn mem_read(&self, address: u16) -> u8 {
-        return self.memory[address as usize];
-    }
-
-    pub fn mem_write(&mut self, address: u16, data: u8) {
-        self.memory[address as usize] = data;
-    }
-
-    fn mem_read_u16(&self, address: u16) -> u16 {
-        let low_order_address = address;
-        let high_order_address = address.wrapping_add(1);
-        return u16::from_le_bytes([
-            self.memory[low_order_address as usize],
-            self.memory[high_order_address as usize],
-        ]);
-    }
-
-    fn zero_page_read_u16(&self, address: u8) -> u16 {
-        let low_order_address = address;
-        let high_order_address = address.wrapping_add(1);
-        return u16::from_le_bytes([
-            self.memory[low_order_address as usize],
-            self.memory[high_order_address as usize],
-        ]);
-    }
-
-    fn mem_write_u16(&mut self, address: u16, data: u16) {
-        let bytes = data.to_le_bytes();
-        let index = address as usize;
-        self.memory[index] = bytes[0];
-        self.memory[index + 1] = bytes[1];
     }
 
     fn get_flag_state(&self, mask: u8) -> FlagStates {
@@ -239,22 +227,36 @@ impl CPU {
     fn get_operand_address(&mut self, addressing_mode: &AddressingMode) -> u16 {
         match addressing_mode {
             AddressingMode::Immediate => self.program_counter,
-            AddressingMode::ZeroPage => self.mem_read(self.program_counter) as u16,
+            AddressingMode::ZeroPage => {
+                self.bus.lock().unwrap().mem_read(self.program_counter) as u16
+            }
             AddressingMode::ZeroPage_X => self
+                .bus
+                .lock()
+                .unwrap()
                 .mem_read(self.program_counter)
                 .wrapping_add(self.register_x) as u16,
             AddressingMode::ZeroPage_Y => self
+                .bus
+                .lock()
+                .unwrap()
                 .mem_read(self.program_counter)
                 .wrapping_add(self.register_y) as u16,
-            AddressingMode::Absolute => self.mem_read_u16(self.program_counter),
+            AddressingMode::Absolute => self.bus.lock().unwrap().mem_read_u16(self.program_counter),
             AddressingMode::Absolute_X => self
+                .bus
+                .lock()
+                .unwrap()
                 .mem_read_u16(self.program_counter)
                 .wrapping_add(self.register_x as u16),
             AddressingMode::Absolute_Y => self
+                .bus
+                .lock()
+                .unwrap()
                 .mem_read_u16(self.program_counter)
                 .wrapping_add(self.register_y as u16),
             AddressingMode::Indirect => {
-                let indirect_adress = self.mem_read_u16(self.program_counter);
+                let indirect_adress = self.bus.lock().unwrap().mem_read_u16(self.program_counter);
                 let low_order_address = indirect_adress;
 
                 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -268,20 +270,31 @@ impl CPU {
                     _ => indirect_adress.wrapping_add(1),
                 };
 
+                let low_order_byte = self.bus.lock().unwrap().mem_read(low_order_address);
+                let high_order_byte = self.bus.lock().unwrap().mem_read(high_order_address);
                 u16::from_le_bytes([
-                    self.memory[low_order_address as usize],
-                    self.memory[high_order_address as usize],
+                    low_order_byte, // Why it doesn't work if I directly call here self.bus.lock()...?
+                    high_order_byte,
                 ])
             }
             AddressingMode::Indexed_Indirect_X => {
                 let indirect_address = self
+                    .bus
+                    .lock()
+                    .unwrap()
                     .mem_read(self.program_counter)
                     .wrapping_add(self.register_x);
-                self.zero_page_read_u16(indirect_address)
+                self.bus
+                    .lock()
+                    .unwrap()
+                    .zero_page_read_u16(indirect_address)
             }
             AddressingMode::Indirect_indexed_Y => {
-                let indirect_address = self.mem_read(self.program_counter);
-                self.zero_page_read_u16(indirect_address)
+                let indirect_address = self.bus.lock().unwrap().mem_read(self.program_counter);
+                self.bus
+                    .lock()
+                    .unwrap()
+                    .zero_page_read_u16(indirect_address)
                     .wrapping_add(self.register_y as u16)
             }
             _ => {
@@ -298,7 +311,7 @@ impl CPU {
             AddressingMode::Accumulator => self.register_a,
             _ => {
                 let index = self.get_operand_address(addressing_mode);
-                self.memory[index as usize]
+                self.bus.lock().unwrap().mem_read(index)
             }
         }
     }
@@ -351,20 +364,19 @@ impl CPU {
     fn asl(&mut self, addressing_mode: &AddressingMode) {
         // code duplication, almost identical to lsr
 
-        let operand: &mut u8;
+        let operand = self.get_operand(addressing_mode);
+        let operand_most_significant_bit = (operand & 0b1000_0000) >> 7;
+        let result = operand << 1;
+
         match addressing_mode {
             AddressingMode::Accumulator => {
-                operand = &mut self.register_a;
+                self.register_a = result;
             }
             _ => {
-                let index = self.get_operand_address(addressing_mode) as usize;
-                operand = &mut self.memory[index];
+                let operand_address = self.get_operand_address(addressing_mode);
+                self.bus.lock().unwrap().mem_write(operand_address, result);
             }
         }
-        let operand_most_significant_bit = ((*operand) & 0b1000_0000) >> 7;
-        let result = *operand << 1;
-
-        *operand = result;
 
         self.update_zero_flag(result);
         self.update_negative_flag(result);
@@ -379,7 +391,7 @@ impl CPU {
     fn bcc(&mut self) {
         match self.get_flag_state(STATUS_FLAG_MASK_CARRY) {
             FlagStates::CLEAR => {
-                let distance = self.mem_read(self.program_counter);
+                let distance = self.bus.lock().unwrap().mem_read(self.program_counter);
                 self.branch_off_program_counter(distance as u16);
             }
             FlagStates::SET => {
@@ -391,7 +403,7 @@ impl CPU {
     fn bcs(&mut self) {
         match self.get_flag_state(STATUS_FLAG_MASK_CARRY) {
             FlagStates::SET => {
-                let distance = self.mem_read(self.program_counter);
+                let distance = self.bus.lock().unwrap().mem_read(self.program_counter);
                 self.branch_off_program_counter(distance as u16);
             }
             FlagStates::CLEAR => {
@@ -403,7 +415,7 @@ impl CPU {
     fn beq(&mut self) {
         match self.get_flag_state(STATUS_FLAG_MASK_ZERO) {
             FlagStates::SET => {
-                let distance = self.mem_read(self.program_counter);
+                let distance = self.bus.lock().unwrap().mem_read(self.program_counter);
                 self.branch_off_program_counter(distance as u16);
             }
             FlagStates::CLEAR => {
@@ -429,7 +441,7 @@ impl CPU {
     fn bmi(&mut self) {
         match self.get_flag_state(STATUS_FLAG_MASK_NEGATIVE) {
             FlagStates::SET => {
-                let distance = self.mem_read(self.program_counter);
+                let distance = self.bus.lock().unwrap().mem_read(self.program_counter);
                 self.branch_off_program_counter(distance as u16);
             }
             FlagStates::CLEAR => {
@@ -441,7 +453,7 @@ impl CPU {
     fn bne(&mut self) {
         match self.get_flag_state(STATUS_FLAG_MASK_ZERO) {
             FlagStates::CLEAR => {
-                let distance = self.mem_read(self.program_counter);
+                let distance = self.bus.lock().unwrap().mem_read(self.program_counter);
                 self.branch_off_program_counter(distance as u16);
             }
             FlagStates::SET => {
@@ -453,7 +465,7 @@ impl CPU {
     fn bpl(&mut self) {
         match self.get_flag_state(STATUS_FLAG_MASK_NEGATIVE) {
             FlagStates::CLEAR => {
-                let distance = self.mem_read(self.program_counter);
+                let distance = self.bus.lock().unwrap().mem_read(self.program_counter);
                 self.branch_off_program_counter(distance as u16);
             }
             FlagStates::SET => {
@@ -465,7 +477,7 @@ impl CPU {
     fn bvc(&mut self) {
         match self.get_flag_state(STATUS_FLAG_MASK_OVERFLOW) {
             FlagStates::CLEAR => {
-                let distance = self.mem_read(self.program_counter);
+                let distance = self.bus.lock().unwrap().mem_read(self.program_counter);
                 self.branch_off_program_counter(distance as u16);
             }
             FlagStates::SET => {
@@ -477,7 +489,7 @@ impl CPU {
     fn bvs(&mut self) {
         match self.get_flag_state(STATUS_FLAG_MASK_OVERFLOW) {
             FlagStates::SET => {
-                let distance = self.mem_read(self.program_counter);
+                let distance = self.bus.lock().unwrap().mem_read(self.program_counter);
                 self.branch_off_program_counter(distance as u16);
             }
             FlagStates::CLEAR => {
@@ -487,7 +499,7 @@ impl CPU {
     }
 
     fn brk(&mut self) {
-        let interrupt_vector = self.mem_read_u16(0xFFFE);
+        let interrupt_vector = self.bus.lock().unwrap().mem_read_u16(0xFFFE);
         self.stack_push_u16(self.program_counter.wrapping_add(1));
         self.stack_push(self.status | 0b0001_0000);
         self.set_flag(STATUS_FLAG_INTERRUPT_DISABLE);
@@ -558,8 +570,8 @@ impl CPU {
 
     fn dec(&mut self, addressing_mode: &AddressingMode) {
         let address = self.get_operand_address(addressing_mode);
-        let result = self.mem_read(address).wrapping_sub(1);
-        self.mem_write(address, result);
+        let result = self.bus.lock().unwrap().mem_read(address).wrapping_sub(1);
+        self.bus.lock().unwrap().mem_write(address, result);
         self.update_zero_flag(result);
         self.update_negative_flag(result);
     }
@@ -606,20 +618,19 @@ impl CPU {
     }
 
     fn lsr(&mut self, addressing_mode: &AddressingMode) {
-        let operand: &mut u8;
+        let operand = self.get_operand(addressing_mode);
+        let operand_least_significant_bit = operand & 0b0000_0001;
+        let result = operand >> 1;
+
         match addressing_mode {
             AddressingMode::Accumulator => {
-                operand = &mut self.register_a;
+                self.register_a = result;
             }
             _ => {
-                let index = self.get_operand_address(addressing_mode) as usize;
-                operand = &mut self.memory[index];
+                let address = self.get_operand_address(addressing_mode);
+                self.bus.lock().unwrap().mem_write(address, result);
             }
         }
-        let operand_least_significant_bit = ((*operand) & 0b0000_0001);
-        let result = *operand >> 1;
-
-        *operand = result;
 
         self.update_zero_flag(result);
         self.update_negative_flag(result);
@@ -662,8 +673,8 @@ impl CPU {
 
     fn inc(&mut self, addressing_mode: &AddressingMode) {
         let address = self.get_operand_address(addressing_mode);
-        let result = self.mem_read(address).wrapping_add(1);
-        self.mem_write(address, result);
+        let result = self.bus.lock().unwrap().mem_read(address).wrapping_add(1);
+        self.bus.lock().unwrap().mem_write(address, result);
         self.update_zero_flag(result);
         self.update_negative_flag(result);
     }
@@ -683,18 +694,9 @@ impl CPU {
     fn rol(&mut self, addressing_mode: &AddressingMode) {
         let carry = self.get_flag_state(STATUS_FLAG_MASK_CARRY);
 
-        let operand: &mut u8;
-        match addressing_mode {
-            AddressingMode::Accumulator => {
-                operand = &mut self.register_a;
-            }
-            _ => {
-                let index = self.get_operand_address(addressing_mode) as usize;
-                operand = &mut self.memory[index];
-            }
-        }
-        let operand_most_significant_bit = ((*operand) & 0b1000_0000) >> 7;
-        let mut result = *operand << 1;
+        let operand = self.get_operand(addressing_mode);
+        let operand_most_significant_bit = (operand & 0b1000_0000) >> 7;
+        let mut result = operand << 1;
 
         match carry {
             FlagStates::SET => {
@@ -704,7 +706,16 @@ impl CPU {
                 result = result & 0b1111_1110;
             }
         }
-        *operand = result;
+
+        match addressing_mode {
+            AddressingMode::Accumulator => {
+                self.register_a = result;
+            }
+            _ => {
+                let address = self.get_operand_address(addressing_mode);
+                self.bus.lock().unwrap().mem_write(address, result);
+            }
+        }
 
         self.update_zero_flag(result);
         self.update_negative_flag(result);
@@ -719,18 +730,9 @@ impl CPU {
     fn ror(&mut self, addressing_mode: &AddressingMode) {
         let carry = self.get_flag_state(STATUS_FLAG_MASK_CARRY);
 
-        let operand: &mut u8;
-        match addressing_mode {
-            AddressingMode::Accumulator => {
-                operand = &mut self.register_a;
-            }
-            _ => {
-                let index = self.get_operand_address(addressing_mode) as usize;
-                operand = &mut self.memory[index];
-            }
-        }
-        let operand_least_significant_bit = ((*operand) & 0b0000_0001);
-        let mut result = *operand >> 1;
+        let operand = self.get_operand(addressing_mode);
+        let operand_least_significant_bit = operand & 0b0000_0001;
+        let mut result = operand >> 1;
 
         match carry {
             FlagStates::SET => {
@@ -740,7 +742,16 @@ impl CPU {
                 result = result & 0b0111_1111;
             }
         }
-        *operand = result;
+
+        match addressing_mode {
+            AddressingMode::Accumulator => {
+                self.register_a = result;
+            }
+            _ => {
+                let address = self.get_operand_address(addressing_mode);
+                self.bus.lock().unwrap().mem_write(address, result);
+            }
+        }
 
         self.update_zero_flag(result);
         self.update_negative_flag(result);
@@ -811,16 +822,16 @@ impl CPU {
     }
     fn sta(&mut self, addressing_mode: &AddressingMode) {
         let address = self.get_operand_address(addressing_mode);
-        self.mem_write(address, self.register_a);
+        self.bus.lock().unwrap().mem_write(address, self.register_a);
     }
 
     fn stx(&mut self, addressing_mode: &AddressingMode) {
         let address = self.get_operand_address(addressing_mode);
-        self.mem_write(address, self.register_x);
+        self.bus.lock().unwrap().mem_write(address, self.register_x);
     }
     fn sty(&mut self, addressing_mode: &AddressingMode) {
         let address = self.get_operand_address(addressing_mode);
-        self.mem_write(address, self.register_y);
+        self.bus.lock().unwrap().mem_write(address, self.register_y);
     }
 
     fn tax(&mut self) {
@@ -878,7 +889,8 @@ impl CPU {
 
 #[cfg(test)]
 mod test_cpu {
-    use std::ops::Add;
+
+    use std::{borrow::Borrow, ops::Deref};
 
     use super::*;
     use json::JsonValue;
@@ -887,7 +899,8 @@ mod test_cpu {
     #[test_case(0b0, 0b0000_0010)]
     #[test_case(0b10, 0b0)]
     fn test_update_zero_flag(register: u8, expected: u8) {
-        let mut cpu = CPU::new();
+        let bus = Bus::new();
+        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
         cpu.update_zero_flag(register);
         assert_eq!(cpu.status, expected);
     }
@@ -896,7 +909,8 @@ mod test_cpu {
 
     #[test]
     fn tax_correctly_updates_register_x() {
-        let mut cpu = CPU::new();
+        let mut bus = Bus::new();
+        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
         cpu.register_a = 0x010;
         cpu.tax();
         assert!(cpu.register_a == cpu.register_x);
@@ -904,7 +918,8 @@ mod test_cpu {
 
     #[test]
     fn tax_correctly_sets_zero_flag() {
-        let mut cpu = CPU::new();
+        let mut bus = Bus::new();
+        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
         cpu.register_a = 0;
         cpu.tax();
         assert!(cpu.status & 0b0000_0010 == 0b10);
@@ -912,7 +927,8 @@ mod test_cpu {
 
     #[test]
     fn tax_correctly_sets_negative_flag() {
-        let mut cpu = CPU::new();
+        let mut bus = Bus::new();
+        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
         cpu.register_a = 0x05;
         cpu.tax();
         assert!(cpu.status & 0b0000_0010 == 0b00);
@@ -922,7 +938,8 @@ mod test_cpu {
 
     #[test]
     fn inx_increments_the_x_register() {
-        let mut cpu = CPU::new();
+        let mut bus = Bus::new();
+        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
         cpu.register_x = 0x00;
         cpu.inx();
         assert_eq!(cpu.register_x, 0x01);
@@ -930,51 +947,24 @@ mod test_cpu {
 
     #[test]
     fn test_inx_overflow() {
-        let mut cpu = CPU::new();
+        let mut bus = Bus::new();
+        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
         cpu.register_x = 0xff;
         cpu.inx();
         cpu.inx();
         assert_eq!(cpu.register_x, 1)
     }
 
-    #[test]
-    fn test_mem_read() {
-        let mut cpu = CPU::new();
-        cpu.memory[0x00AA] = 12;
-        assert_eq!(cpu.mem_read(0x00AA), 12);
-    }
-
-    #[test]
-    fn test_mem_write() {
-        let mut cpu = CPU::new();
-        cpu.mem_write(0x00AA, 12);
-        assert_eq!(cpu.memory[0x00AA], 12);
-    }
-
-    #[test]
-    fn test_mem_write_u16() {
-        let mut cpu = CPU::new();
-        cpu.mem_write_u16(0x00AA, 0x8000);
-        assert_eq!(cpu.memory[0x00AA], 0x00);
-        assert_eq!(cpu.memory[0x00AB], 0x80);
-    }
-
-    #[test]
-    fn test_mem_read_u16() {
-        let mut cpu = CPU::new();
-        cpu.memory[0x00AA] = 0x00;
-        cpu.memory[0x00AB] = 0x80;
-        assert_eq!(cpu.mem_read_u16(0x00AA), 0x8000);
-    }
-
     #[test_case(0b0000_0000, 0x85, 0x03, 0x88, 0b0000_0000)]
     #[test_case(0b0000_0000, 0x85, 0x99, 0x1E, 0b0000_0001)]
     #[test_case(0b0000_0001, 0x5F, 0x42, 0xA2, 0b0000_0000)]
     fn test_adc(status: u8, acc: u8, nn: u8, expected_acc: u8, expected_carry_flag: u8) {
-        let mut cpu = CPU::new();
+        let mut bus = Bus::new();
+        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
+
         cpu.program_counter = 0x8000;
         cpu.register_a = acc;
-        cpu.memory[0x8000] = nn;
+        cpu.bus.lock().unwrap().mem_write(0x8000, nn);
         cpu.status = status;
 
         cpu.adc(&AddressingMode::Immediate);
@@ -984,9 +974,11 @@ mod test_cpu {
 
     #[test]
     fn test_and() {
-        let mut cpu = CPU::new();
+        let mut bus = Bus::new();
+        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
+
         cpu.register_a = 0b1001_1001;
-        cpu.memory[0xFF00 as usize] = 0b1111_1111;
+        cpu.bus.lock().unwrap().mem_write(0xFF00, 0b1111_1111);
         cpu.program_counter = 0xFF00;
 
         let addressing_mode = AddressingMode::Immediate;
@@ -998,7 +990,8 @@ mod test_cpu {
     #[test_case(0b0001_0010, 0b0000_0001, 0b0010_0100, 0b0000_0000)]
     #[test_case(0b1001_0010, 0b0000_0000, 0b0010_0100, 0b0000_0001)]
     fn test_asl_accumulator(acc: u8, status: u8, expected_acc: u8, expected_status: u8) {
-        let mut cpu = CPU::new();
+        let mut bus = Bus::new();
+        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
         cpu.register_a = acc;
         cpu.status = status;
         cpu.asl(&AddressingMode::Accumulator);
@@ -1009,13 +1002,14 @@ mod test_cpu {
     #[test_case(0b0001_0010, 0b0000_0001, 0b0010_0100, 0b0000_0000)]
     #[test_case(0b1001_0010, 0b0000_0000, 0b0010_0100, 0b0000_0001)]
     fn test_asl_memory(operand: u8, status: u8, epxected_operand: u8, expected_status: u8) {
-        let mut cpu = CPU::new();
+        let mut bus = Bus::new();
+        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
         cpu.status = status;
         cpu.program_counter = 0x0000;
-        cpu.mem_write(cpu.program_counter, 0x80);
-        cpu.mem_write(0x80, operand);
+        cpu.bus.lock().unwrap().mem_write(cpu.program_counter, 0x80);
+        cpu.bus.lock().unwrap().mem_write(0x80, operand);
         cpu.asl(&AddressingMode::ZeroPage);
-        assert_eq!(cpu.mem_read(0x80), epxected_operand);
+        assert_eq!(cpu.bus.lock().unwrap().mem_read(0x80), epxected_operand);
         assert_eq!(cpu.status, expected_status);
     }
 
@@ -1023,10 +1017,14 @@ mod test_cpu {
     #[test_case(0b0000_0000, 0xE004, 0xE00A, 0x06)]
     #[test_case(0b0000_0000, 0xE009, 0xE003, 0xFA)]
     fn test_bcc(status: u8, program_counter: u16, expected_program_counter: u16, distance: u8) {
-        let mut cpu = CPU::new();
+        let mut bus = Bus::new();
+        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
         cpu.status = status;
         cpu.program_counter = program_counter;
-        cpu.memory[cpu.program_counter as usize] = distance;
+        cpu.bus
+            .lock()
+            .unwrap()
+            .mem_write(cpu.program_counter, distance);
         cpu.bcc();
         assert_eq!(cpu.program_counter, expected_program_counter);
     }
@@ -1035,10 +1033,14 @@ mod test_cpu {
     #[test_case(0b0000_0001, 0xE004, 0xE00A, 0x06)]
     #[test_case(0b0000_0001, 0xE009, 0xE003, 0xFA)]
     fn test_bcs(status: u8, program_counter: u16, expected_program_counter: u16, distance: u8) {
-        let mut cpu = CPU::new();
+        let mut bus = Bus::new();
+        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
         cpu.status = status;
         cpu.program_counter = program_counter;
-        cpu.memory[cpu.program_counter as usize] = distance;
+        cpu.bus
+            .lock()
+            .unwrap()
+            .mem_write(cpu.program_counter, distance);
         cpu.bcs();
         assert_eq!(cpu.program_counter, expected_program_counter);
     }
@@ -1047,10 +1049,14 @@ mod test_cpu {
     #[test_case(0b0000_0010, 0xE004, 0xE00A, 0x06)]
     #[test_case(0b0000_0010, 0xE009, 0xE003, 0xFA)]
     fn test_beq(status: u8, program_counter: u16, expected_program_counter: u16, distance: u8) {
-        let mut cpu = CPU::new();
+        let mut bus = Bus::new();
+        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
         cpu.status = status;
         cpu.program_counter = program_counter;
-        cpu.memory[cpu.program_counter as usize] = distance;
+        cpu.bus
+            .lock()
+            .unwrap()
+            .mem_write(cpu.program_counter, distance);
         cpu.beq();
         assert_eq!(cpu.program_counter, expected_program_counter);
     }
@@ -1059,10 +1065,14 @@ mod test_cpu {
     #[test_case(0b1000_0000, 0xE004, 0xE00A, 0x06)]
     #[test_case(0b1000_0000, 0xE009, 0xE003, 0xFA)]
     fn test_bmi(status: u8, program_counter: u16, expected_program_counter: u16, distance: u8) {
-        let mut cpu = CPU::new();
+        let mut bus = Bus::new();
+        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
         cpu.status = status;
         cpu.program_counter = program_counter;
-        cpu.memory[cpu.program_counter as usize] = distance;
+        cpu.bus
+            .lock()
+            .unwrap()
+            .mem_write(cpu.program_counter, distance);
         cpu.bmi();
         assert_eq!(cpu.program_counter, expected_program_counter);
     }
@@ -1071,10 +1081,14 @@ mod test_cpu {
     #[test_case(0b0000_0000, 0xE004, 0xE00A, 0x06)]
     #[test_case(0b0000_0000, 0xE009, 0xE003, 0xFA)]
     fn test_bne(status: u8, program_counter: u16, expected_program_counter: u16, distance: u8) {
-        let mut cpu = CPU::new();
+        let mut bus = Bus::new();
+        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
         cpu.status = status;
         cpu.program_counter = program_counter;
-        cpu.memory[cpu.program_counter as usize] = distance;
+        cpu.bus
+            .lock()
+            .unwrap()
+            .mem_write(cpu.program_counter, distance);
         cpu.bne();
         assert_eq!(cpu.program_counter, expected_program_counter);
     }
@@ -1083,10 +1097,14 @@ mod test_cpu {
     #[test_case(0b0000_0000, 0xE004, 0xE00A, 0x06)]
     #[test_case(0b0000_0000, 0xE009, 0xE003, 0xFA)]
     fn test_bvc(status: u8, program_counter: u16, expected_program_counter: u16, distance: u8) {
-        let mut cpu = CPU::new();
+        let mut bus = Bus::new();
+        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
         cpu.status = status;
         cpu.program_counter = program_counter;
-        cpu.memory[cpu.program_counter as usize] = distance;
+        cpu.bus
+            .lock()
+            .unwrap()
+            .mem_write(cpu.program_counter, distance);
         cpu.bvc();
         assert_eq!(cpu.program_counter, expected_program_counter);
     }
@@ -1095,10 +1113,14 @@ mod test_cpu {
     #[test_case(0b0100_0000, 0xE004, 0xE00A, 0x06)]
     #[test_case(0b0100_0000, 0xE009, 0xE003, 0xFA)]
     fn test_bvs(status: u8, program_counter: u16, expected_program_counter: u16, distance: u8) {
-        let mut cpu = CPU::new();
+        let mut bus = Bus::new();
+        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
         cpu.status = status;
         cpu.program_counter = program_counter;
-        cpu.memory[cpu.program_counter as usize] = distance;
+        cpu.bus
+            .lock()
+            .unwrap()
+            .mem_write(cpu.program_counter, distance);
         cpu.bvs();
         assert_eq!(cpu.program_counter, expected_program_counter);
     }
@@ -1108,7 +1130,8 @@ mod test_cpu {
     #[test_case(0b0100_0001, 0b0100_0000)]
     #[test_case(0b0100_0000, 0b0100_0000)]
     fn test_clc(status: u8, expected_status: u8) {
-        let mut cpu = CPU::new();
+        let mut bus = Bus::new();
+        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
         cpu.status = status;
         cpu.clc();
         assert_eq!(cpu.status, expected_status)
@@ -1119,7 +1142,8 @@ mod test_cpu {
     #[test_case(0b0100_0001, 0b0000_0001)]
     #[test_case(0b0000_0001, 0b0000_0001)]
     fn test_clv(status: u8, expected_status: u8) {
-        let mut cpu = CPU::new();
+        let mut bus = Bus::new();
+        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
         cpu.status = status;
         cpu.clv();
         assert_eq!(cpu.status, expected_status)
@@ -1138,10 +1162,11 @@ mod test_cpu {
         expected_zero_flag_state: FlagStates,
         expected_negative_flag_state: FlagStates,
     ) {
-        let mut cpu = CPU::new();
+        let mut bus = Bus::new();
+        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
         cpu.register_a = accumulator;
         cpu.program_counter = 0x8001;
-        cpu.mem_write(0x8001, memory_value);
+        cpu.bus.lock().unwrap().mem_write(0x8001, memory_value);
 
         cpu.cmp(&AddressingMode::Immediate);
         let carry_flag_state = cpu.get_flag_state(STATUS_FLAG_MASK_CARRY);
@@ -1178,10 +1203,11 @@ mod test_cpu {
         expected_zero_flag_state: FlagStates,
         expected_negative_flag_state: FlagStates,
     ) {
-        let mut cpu = CPU::new();
+        let mut bus = Bus::new();
+        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
         cpu.register_x = register_x;
         cpu.program_counter = 0x8001;
-        cpu.mem_write(0x8001, memory_value);
+        cpu.bus.lock().unwrap().mem_write(0x8001, memory_value);
 
         cpu.cpx(&AddressingMode::Immediate);
         let carry_flag_state = cpu.get_flag_state(STATUS_FLAG_MASK_CARRY);
@@ -1212,10 +1238,14 @@ mod test_cpu {
         expected_zero_flag_state: FlagStates,
         expected_negative_flag: FlagStates,
     ) {
-        let mut cpu = CPU::new();
+        let mut bus = Bus::new();
+        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
         cpu.program_counter = 0xAAAA;
         cpu.register_y = 151;
-        cpu.mem_write(cpu.program_counter, register_y_value);
+        cpu.bus
+            .lock()
+            .unwrap()
+            .mem_write(cpu.program_counter, register_y_value);
         cpu.ldy(&AddressingMode::Immediate);
         assert_eq!(cpu.register_y, register_y_value);
         assert_eq!(
@@ -1234,10 +1264,11 @@ mod test_cpu {
     #[test_case(0b0000_0001, 0x80, 0x1, 0x7F, 0b0100_0001)]
     #[test_case(0b0000_0001, 0x7F, 0xFF, 0x80, 0b1100_0000)]
     fn test_sbc(status: u8, acc: u8, nn: u8, expected_acc: u8, expected_status: u8) {
-        let mut cpu = CPU::new();
+        let mut bus = Bus::new();
+        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
         cpu.program_counter = 0x8000;
         cpu.register_a = acc;
-        cpu.memory[0x8000] = nn;
+        cpu.bus.lock().unwrap().mem_write(0x8000, nn);
         cpu.status = status;
         cpu.sbc(&AddressingMode::Immediate);
         assert_eq!(cpu.register_a, expected_acc);
@@ -1248,7 +1279,8 @@ mod test_cpu {
     #[test_case(0b0000_0000, 0x0, 0b0000_0010)]
     #[test_case(0b0000_0000, 0xFF, 0b1000_0000)]
     fn test_txa(status: u8, x: u8, expected_status: u8) {
-        let mut cpu = CPU::new();
+        let mut bus = Bus::new();
+        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
         cpu.status = status;
         cpu.register_x = x;
         cpu.txa();
@@ -1259,7 +1291,8 @@ mod test_cpu {
 
     #[test]
     fn test_addressing_mode_immediate() {
-        let mut cpu = CPU::new();
+        let mut bus = Bus::new();
+        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
         cpu.program_counter = 0x8000;
         let result = cpu.get_operand_address(&AddressingMode::Immediate);
         assert_eq!(result, 0x8000);
@@ -1267,18 +1300,20 @@ mod test_cpu {
 
     #[test]
     fn test_addressing_mode_zero_page() {
-        let mut cpu = CPU::new();
+        let mut bus = Bus::new();
+        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
         cpu.program_counter = 0xAAAA;
-        cpu.mem_write(0xAAAA, 0xAA);
+        cpu.bus.lock().unwrap().mem_write(0xAAAA, 0xAA);
         let result = cpu.get_operand_address(&AddressingMode::ZeroPage);
         assert_eq!(result, 0xAA);
     }
 
     #[test]
     fn test_addressing_mode_zero_page_x() {
-        let mut cpu = CPU::new();
+        let mut bus = Bus::new();
+        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
         cpu.program_counter = 0xAAAA;
-        cpu.mem_write(0xAAAA, 0x80);
+        cpu.bus.lock().unwrap().mem_write(0xAAAA, 0x80);
         cpu.register_x = 0xFF;
         let result = cpu.get_operand_address(&AddressingMode::ZeroPage_X);
         assert_eq!(result, 0x7F);
@@ -1286,9 +1321,10 @@ mod test_cpu {
 
     #[test]
     fn test_addressing_mode_zero_page_y() {
-        let mut cpu = CPU::new();
+        let mut bus = Bus::new();
+        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
         cpu.program_counter = 0xAAAA;
-        cpu.mem_write(0xAAAA, 0x80);
+        cpu.bus.lock().unwrap().mem_write(0xAAAA, 0x80);
         cpu.register_y = 0xFF;
         let result = cpu.get_operand_address(&AddressingMode::ZeroPage_Y);
         assert_eq!(result, 0x7F);
@@ -1296,19 +1332,21 @@ mod test_cpu {
 
     #[test]
     fn test_addressing_mode_absolute() {
-        let mut cpu = CPU::new();
+        let mut bus = Bus::new();
+        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
         cpu.program_counter = 0x0;
-        cpu.memory[0x0] = 0x9e;
-        cpu.memory[0x1] = 0x5e;
+        cpu.bus.lock().unwrap().mem_write(0x0, 0x9e);
+        cpu.bus.lock().unwrap().mem_write(0x1, 0x5e);
         let result = cpu.get_operand_address(&AddressingMode::Absolute);
         assert_eq!(result, 0x5e9e);
     }
 
     #[test]
     fn test_addressing_mode_absolute_x() {
-        let mut cpu = CPU::new();
+        let mut bus = Bus::new();
+        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
         cpu.program_counter = 0x0;
-        cpu.mem_write_u16(0x00, 2000);
+        cpu.bus.lock().unwrap().mem_write_u16(0x00, 2000);
         cpu.register_x = 82;
         let result = cpu.get_operand_address(&AddressingMode::Absolute_X);
         assert_eq!(result, 2082);
@@ -1316,9 +1354,10 @@ mod test_cpu {
 
     #[test]
     fn test_addressing_mode_absolute_y() {
-        let mut cpu = CPU::new();
+        let mut bus = Bus::new();
+        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
         cpu.program_counter = 0x0;
-        cpu.mem_write_u16(0x00, 2000);
+        cpu.bus.lock().unwrap().mem_write_u16(0x00, 2000);
         cpu.register_y = 82;
         let result = cpu.get_operand_address(&AddressingMode::Absolute_Y);
         assert_eq!(result, 2082);
@@ -1326,10 +1365,11 @@ mod test_cpu {
 
     #[test]
     fn test_addressing_mode_indexed_indirect_x() {
-        let mut cpu = CPU::new();
+        let mut bus = Bus::new();
+        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
         cpu.program_counter = 0x8000;
-        cpu.mem_write(0x8000, 0x20);
-        cpu.mem_write_u16(0x0021, 0xBAFC);
+        cpu.bus.lock().unwrap().mem_write(0x8000, 0x20);
+        cpu.bus.lock().unwrap().mem_write_u16(0x0021, 0xBAFC);
         cpu.register_x = 0x01;
         let result = cpu.get_operand_address(&AddressingMode::Indexed_Indirect_X);
         assert_eq!(result, 0xBAFC);
@@ -1337,10 +1377,11 @@ mod test_cpu {
 
     #[test]
     fn test_addressing_mode_indirect_indexed_y() {
-        let mut cpu = CPU::new();
+        let mut bus = Bus::new();
+        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
         cpu.program_counter = 0x8000;
-        cpu.mem_write(0x8000, 0x52);
-        cpu.mem_write_u16(0x0052, 0xEF05);
+        cpu.bus.lock().unwrap().mem_write(0x8000, 0x52);
+        cpu.bus.lock().unwrap().mem_write_u16(0x0052, 0xEF05);
         cpu.register_y = 0x03;
 
         let result = cpu.get_operand_address(&AddressingMode::Indirect_indexed_Y);
@@ -1349,7 +1390,8 @@ mod test_cpu {
 
     #[test]
     fn test_get_operand() {
-        let mut cpu = CPU::new();
+        let mut bus = Bus::new();
+        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
         cpu.register_a = 0x80;
         let result = cpu.get_operand(&AddressingMode::Accumulator);
         assert_eq!(result, 0x80);
@@ -1520,11 +1562,9 @@ mod test_cpu {
         let name = &test["name"];
         println!("Testing with instructions: {}", name);
 
-        let initial_cpu = cpu_from_json_value(&test["initial"]);
-
         let final_cpu = cpu_from_json_value(&test["final"]);
 
-        let mut cpu = initial_cpu.clone();
+        let mut cpu = cpu_from_json_value(&test["initial"]);
 
         cpu.execute_next_instruction();
 
@@ -1557,11 +1597,12 @@ mod test_cpu {
             final_cpu.stack_pointer, cpu.stack_pointer
         );
 
+        let cpu_bus = (*cpu.bus.lock().unwrap()).clone();
+        let final_cpu_bus = (*final_cpu.bus.lock().unwrap()).clone();
         assert_eq!(
-            cpu.memory,
-            final_cpu.memory,
-            "Memories don't match: \n{}",
-            array_diff(cpu.memory.to_vec(), final_cpu.memory.to_vec())
+            cpu_bus, final_cpu_bus,
+            "Memories don't match!",
+            // array_diff(cpu.memory.to_vec(), final_cpu.memory.to_vec())
         );
     }
 
@@ -1578,7 +1619,9 @@ mod test_cpu {
     }
 
     fn cpu_from_json_value(json_value: &JsonValue) -> CPU {
-        let mut cpu = CPU::new();
+        let bus = Bus::new();
+        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
+
         cpu.program_counter = json_value["pc"].as_u16().unwrap();
         cpu.status = json_value["p"].as_u8().unwrap();
         cpu.register_a = json_value["a"].as_u8().unwrap();
@@ -1587,12 +1630,11 @@ mod test_cpu {
         cpu.stack_pointer = json_value["s"].as_u8().unwrap();
 
         for ram_tuple in json_value["ram"].members() {
-            cpu.mem_write(
+            cpu.bus.lock().unwrap().mem_write(
                 ram_tuple[0].as_u16().unwrap(),
                 ram_tuple[1].as_u8().unwrap(),
             );
         }
-
         return cpu;
     }
 }
