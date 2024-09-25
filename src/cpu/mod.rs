@@ -1557,7 +1557,6 @@ mod test_cpu {
         }
     }
 
-    // todo: derive from file, one test per line
     fn run_test(test: &JsonValue) {
         let name = &test["name"];
         println!("Testing with instructions: {}", name);
@@ -1602,20 +1601,7 @@ mod test_cpu {
         assert_eq!(
             cpu_bus, final_cpu_bus,
             "Memories don't match!",
-            // array_diff(cpu.memory.to_vec(), final_cpu.memory.to_vec())
         );
-    }
-
-    fn array_diff(left: Vec<u8>, right: Vec<u8>) -> String {
-        let mut display_diff = String::from("");
-
-        for (i, (a, b)) in left.iter().zip(right.iter()).enumerate() {
-            if a != b {
-                display_diff.push_str(&format!("Difference at position {i}: {a} != {b}\n"));
-            }
-        }
-
-        return display_diff;
     }
 
     fn cpu_from_json_value(json_value: &JsonValue) -> CPU {
@@ -1637,4 +1623,5 @@ mod test_cpu {
         }
         return cpu;
     }
+
 }
