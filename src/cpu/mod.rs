@@ -157,10 +157,19 @@ impl CPU {
         }
     }
 
-    // fn load(&mut self, program: Vec<u8>) {
-    //     self.memory[0x8000..(0x8000 + program.len())].copy_from_slice(&program[..]);
-    //     self.bus.lock().unwrap().mem_write_u16(0xFFFC, 0x8000);
-    // }
+    fn load(&mut self, program: Vec<u8>) {
+        self.bus
+            .lock()
+            .unwrap()
+            .mem_write_u16(0xFFFC, self.program_counter);
+
+        for address in self.program_counter..(self.program_counter + (program.len() as u16)) {
+            self.bus
+                .lock()
+                .unwrap()
+                .mem_write(address, program[(address - self.program_counter) as usize]);
+        }
+    }
 
     fn stack_pop(&mut self) -> u8 {
         self.stack_pointer = self.stack_pointer.wrapping_add(1);
@@ -889,12 +898,22 @@ impl CPU {
 
 #[cfg(test)]
 mod test_cpu {
-
-    use std::{borrow::Borrow, ops::Deref};
-
     use super::*;
     use json::JsonValue;
     use test_case::test_case;
+
+    #[test]
+    fn test_load() {
+        let bus = Bus::new();
+        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
+        cpu.program_counter = 0x8000;
+        let program = vec![0xAA, 0x35, 0xFF, 0x00];
+        cpu.load(program);
+        assert_eq!(0xAA, cpu.bus.lock().unwrap().mem_read(0x8000));
+        assert_eq!(0x35, cpu.bus.lock().unwrap().mem_read(0x8001));
+        assert_eq!(0xFF, cpu.bus.lock().unwrap().mem_read(0x8002));
+        assert_eq!(0x00, cpu.bus.lock().unwrap().mem_read(0x8003));
+    }
 
     #[test_case(0b0, 0b0000_0010)]
     #[test_case(0b10, 0b0)]
