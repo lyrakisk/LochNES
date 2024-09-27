@@ -27,7 +27,7 @@ pub struct CPU {
     pub status: u8,
     pub program_counter: u16,
     pub stack_pointer: u8,
-    bus: Arc<Mutex<Bus>>,
+    pub bus: Arc<Mutex<Bus>>,
 }
 
 impl CPU {
@@ -52,6 +52,16 @@ impl CPU {
 
     pub fn run(&mut self) {
         loop {
+            self.execute_next_instruction();
+        }
+    }
+
+    pub fn run_with_callback<F>(&mut self, mut callback: F)
+    where
+        F: FnMut(&mut CPU),
+    {
+        loop {
+            callback(self);
             self.execute_next_instruction();
         }
     }
@@ -157,7 +167,7 @@ impl CPU {
         }
     }
 
-    fn load(&mut self, program: Vec<u8>) {
+    pub fn load(&mut self, program: Vec<u8>) {
         self.bus
             .lock()
             .unwrap()
