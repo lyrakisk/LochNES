@@ -440,7 +440,7 @@ impl CPU {
         self.update_zero_flag(result);
         self.update_negative_flag(operand);
 
-        if (operand & 0b0100_0000 == 0b0100_0000) {
+        if operand & 0b0100_0000 == 0b0100_0000 {
             self.set_flag(STATUS_FLAG_MASK_OVERFLOW);
         } else {
             self.clear_flag(STATUS_FLAG_MASK_OVERFLOW);
@@ -795,7 +795,7 @@ impl CPU {
         let operand = !self.get_operand(addressing_mode);
         let register_a_sign = self.register_a & 0b1000_0000;
         let operand_sign = operand & 0b1000_0000;
-        let carry = (self.get_flag_state(STATUS_FLAG_MASK_CARRY) as u8);
+        let carry = self.get_flag_state(STATUS_FLAG_MASK_CARRY) as u8;
         let (temp_sum, overflow_occured_on_first_addition) =
             self.register_a.overflowing_add(operand);
         let (final_sum, overflow_occured_on_second_addition) = temp_sum.overflowing_add(carry);
@@ -1617,10 +1617,7 @@ mod test_cpu {
 
         let cpu_bus = (*cpu.bus.lock().unwrap()).clone();
         let final_cpu_bus = (*final_cpu.bus.lock().unwrap()).clone();
-        assert_eq!(
-            cpu_bus, final_cpu_bus,
-            "Memories don't match!",
-        );
+        assert_eq!(cpu_bus, final_cpu_bus, "Memories don't match!",);
     }
 
     fn cpu_from_json_value(json_value: &JsonValue) -> CPU {
@@ -1642,5 +1639,4 @@ mod test_cpu {
         }
         return cpu;
     }
-
 }
