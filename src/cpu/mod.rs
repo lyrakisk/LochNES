@@ -168,17 +168,13 @@ impl CPU {
     }
 
     pub fn load(&mut self, program: Vec<u8>) {
-        self.bus
+        for address in self.program_counter..=(self.program_counter - 1 + program.len() as u16) {
+            let program_address = (address).wrapping_sub(self.program_counter) as usize;
+            self.bus
             .lock()
             .unwrap()
-            .mem_write_u16(0xFFFC, self.program_counter);
-
-        for address in self.program_counter..(self.program_counter + (program.len() as u16)) {
-            self.bus
-                .lock()
-                .unwrap()
-                .mem_write(address, program[(address - self.program_counter) as usize]);
-        }
+            .mem_write(address as u16, program[program_address]);
+         }
     }
 
     fn stack_pop(&mut self) -> u8 {
