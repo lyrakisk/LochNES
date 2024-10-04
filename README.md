@@ -5,14 +5,14 @@ A (soon to be) fully-featured NES emulator written in Rust.
 
 ## Roadmap
 - [X] CPU
+  - no illegal opcodes yet
 - [ ] Bus
 - [ ] PPU
 - [ ] APU
 
-## Illegal Opcodes
-At the moment, the emulator does not implement any illegal opcodes. If it encounters one, it will panic.
 
 # Resources
-- https://github.com/bugzmanov/nes_ebook
-- https://www.nesdev.org
-- https://archive.org/details/6502UsersManual/mode/2up
+- https://github.com/bugzmanov/nes_ebook, where it all started for me
+- https://www.nesdev.org, no NES emulator is built without it
+- https://archive.org/details/6502UsersManual/mode/2up, a nice reference to the 6502 processor (not the Ricoh version though)
+- https://austinmorlan.com/posts/nes_rendering_overview, a great resource to understand how PPU works
