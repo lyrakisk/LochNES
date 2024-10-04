@@ -171,10 +171,10 @@ impl CPU {
         for address in self.program_counter..=(self.program_counter - 1 + program.len() as u16) {
             let program_address = (address).wrapping_sub(self.program_counter) as usize;
             self.bus
-            .lock()
-            .unwrap()
-            .mem_write(address as u16, program[program_address]);
-         }
+                .lock()
+                .unwrap()
+                .mem_write(address as u16, program[program_address]);
+        }
     }
 
     fn stack_pop(&mut self) -> u8 {

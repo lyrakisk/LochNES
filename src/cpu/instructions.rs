@@ -27,17 +27,6 @@ pub struct Instruction {
     pub addressing_mode: AddressingMode,
 }
 
-impl Instruction {
-    pub fn new(opcode: u8, name: &'static str, bytes: u8, addressing_mode: AddressingMode) -> Self {
-        Instruction {
-            opcode: opcode,
-            name: name,
-            bytes: bytes,
-            addressing_mode: addressing_mode,
-        }
-    }
-}
-
 #[rustfmt::skip]
 pub static INSTRUCTIONS: Lazy<HashMap<u8, Instruction>> = Lazy::new(|| {
     vec![

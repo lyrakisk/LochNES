@@ -1,7 +1,7 @@
+use rand::Rng;
 use LochNES::bus::*;
 use LochNES::cpu::*;
 use LochNES::rom::*;
-use rand::Rng;
 
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
@@ -9,9 +9,9 @@ use sdl2::pixels::Color;
 use sdl2::pixels::PixelFormatEnum;
 use sdl2::EventPump;
 
-use std::sync::{Arc, Mutex};
 use std::fs::read;
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 fn main() {
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
