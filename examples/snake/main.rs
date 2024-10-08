@@ -33,7 +33,7 @@ fn main() {
     let mut screen_state = [0 as u8; 32 * 3 * 32];
     let mut rng = rand::thread_rng();
 
-    let rom_bytes = read(PathBuf::from("examples/test_rom/snake.nes")).unwrap();
+    let rom_bytes = read(PathBuf::from("examples/snake/snake.nes")).unwrap();
     let rom = Rom::try_from(&rom_bytes).unwrap();
     let bus = Bus::new();
 
