@@ -21,6 +21,5 @@ jobs:
       uses: ./.github/actions/docker
       with:
         script: |
-          rustup default stable
           cargo build --verbose
           cargo test --verbose
