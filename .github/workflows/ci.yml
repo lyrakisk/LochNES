@@ -13,10 +13,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout repo & submodules
+      uses: actions/checkout@v3
       with:
         submodules: true
-    - name: Build
-      run: cargo build --verbose
     - name: Run tests
-      run: cargo test --verbose
+      uses: ./.github/actions/docker
+      with:
+        script: |
+          rustup default stable
+          cargo build --verbose
+          cargo test --verbose

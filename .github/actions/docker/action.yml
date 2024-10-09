@@ -1,0 +1,12 @@
+name: 'Docker'
+description: 'Installs dependencies in a docker container that will be used in workflows'
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  args:
+    - ${{ inputs.script }}
+
+inputs:
+  script:
+    description: 'The script to run inside the container.'
+    required: true
