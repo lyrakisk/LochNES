@@ -10,7 +10,7 @@ A (soon to be) fully-featured NES emulator written in Rust.
 - [ ] PPU
 - [ ] APU
 
-![Coverage](https://img.shields.io/badge/coverage-35%25-brightgreen)
+![Coverage Status](https://coveralls.io/repos/github/username/repo/badge.svg?branch=main)
 
 # Resources
 - https://github.com/bugzmanov/nes_ebook, where it all started for me
