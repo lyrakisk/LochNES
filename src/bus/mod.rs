@@ -7,8 +7,7 @@ impl Bus {
     pub fn new() -> Self {
         Bus { memory: [0; 65536] }
     }
-    // consider returning reference to memory instead of copying,
-    // because some instructions need to update it in place
+
     pub fn mem_read(&self, address: u16) -> u8 {
         return self.memory[address as usize];
     }
