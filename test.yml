@@ -1,34 +1,34 @@
-name: Rust CI
+name: rust_ci
 
 on: [push, pull_request]
 
 jobs:
-  test:
+  run_tests:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
+    - name: checkout_code
       uses: actions/checkout@v2
 
-    - name: Install Rust
+    - name: install_rust
       uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
         override: true
 
-    - name: Install cargo-tarpaulin
+    - name: install_cargo_tarpaulin
       run: cargo install cargo-tarpaulin
 
-    - name: Run tests with coverage
+    - name: run_tests_with_coverage
       run: cargo tarpaulin --out Xml
 
-    - name: Upload coverage data
+    - name: upload_coverage_data
       uses: actions/upload-artifact@v2
       with:
-        name: coverage-report
+        name: coverage_report
         path: ./tarpaulin-report.xml
 
-    - name: Generate coverage badge
+    - name: generate_coverage_badge
       uses: actions-rs/tarpaulin-action@v0.3.2
       with:
         coverage_file: ./tarpaulin-report.xml
