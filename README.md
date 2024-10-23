@@ -10,6 +10,7 @@ A (soon to be) fully-featured NES emulator written in Rust.
 - [ ] PPU
 - [ ] APU
 
+![Coverage Status](https://coveralls.io/repos/github/username/repo/badge.svg?branch=main)
 
 # Resources
 ## General

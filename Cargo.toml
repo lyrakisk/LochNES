@@ -16,3 +16,4 @@ rand = "=0.7.3"
 
 [[example]]
 name = "snake"
+cargo_metadata = "=0.18.1"
