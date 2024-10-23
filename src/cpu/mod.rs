@@ -30,6 +30,11 @@ pub struct CPU {
     pub bus: Arc<Mutex<Bus>>,
 }
 
+enum CPU_States {
+    FETCH,
+    EXECUTE_INSTRUCTION,
+}
+
 impl CPU {
     pub fn new(bus: Arc<Mutex<Bus>>) -> Self {
         CPU {
@@ -48,6 +53,21 @@ impl CPU {
         self.register_x = 0;
         self.status = 0;
         self.program_counter = self.bus.lock().unwrap().mem_read_u16(0xFFFC);
+    }
+
+    pub fn tick(&mut self) {
+        match cpu.state {
+            CPU_States::FETCH => {
+                let next_opcode = self.fetch()}
+                self.current_instruction = self.decode();
+            CPU_States::EXECUTE_INSTRUCTION => {
+                if cpu.current_instruction.has_next_step() {
+                    self.current_instruction.execute_step();
+                } else {
+                    cpu.state = CPU_States::FETCH
+                }
+            }
+        }
     }
 
     pub fn run(&mut self) {

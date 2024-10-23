@@ -1,5 +1,5 @@
 use once_cell::sync::Lazy;
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 
 #[derive(Clone, Debug)]
 #[allow(non_camel_case_types)]
@@ -25,8 +25,19 @@ pub struct Instruction {
     pub name: &'static str,
     pub bytes: u8,
     pub addressing_mode: AddressingMode,
+    pub steps: VecDeque< &dyn FnMut(Vec<u8>) -> (Vec<u8>)>,
 }
 
+impl Instruction {
+    pub fn exexute_step(&mut self) {
+        let step = self.steps.pop();
+        let data_for_next_step = step(self.data);
+        self.data = data_for_next_step;
+    }
+    pub fn has_next_step(&self) {
+        return ! self.steps.is_empty();
+    }
+}
 #[rustfmt::skip]
 pub static INSTRUCTIONS: Lazy<HashMap<u8, Instruction>> = Lazy::new(|| {
     vec![
