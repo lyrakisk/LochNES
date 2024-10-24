@@ -72,7 +72,7 @@ impl CPU {
         let decoded_opcode = self.decode(opcode);
 
         match decoded_opcode {
-            None => panic!("Could not decode opcode {opcode}"),
+            None => panic!("Could not decode opcode 0x{:02x}", opcode),
             Some(instruction) => {
                 self.execute(instruction.clone());
                 self.update_program_counter(instruction);
