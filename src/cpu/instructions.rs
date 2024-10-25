@@ -181,6 +181,15 @@ pub static INSTRUCTIONS: Lazy<HashMap<u8, Instruction>> = Lazy::new(|| {
         Instruction {opcode: 0x8A, name: "TXA", bytes: 1, addressing_mode: AddressingMode::Implicit},
         Instruction {opcode: 0x9A, name: "TXS", bytes: 1, addressing_mode: AddressingMode::Implicit},
         Instruction {opcode: 0x98, name: "TYA", bytes: 1, addressing_mode: AddressingMode::Implicit},
+
+        // Illegal Opcodes
+        Instruction {opcode: 0x07, name: "SLO", bytes: 2, addressing_mode: AddressingMode::ZeroPage},
+        Instruction {opcode: 0x17, name: "SLO", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X },
+        Instruction {opcode: 0x0F, name: "SLO", bytes: 3, addressing_mode: AddressingMode::Absolute},
+        Instruction {opcode: 0x1F, name: "SLO", bytes: 3, addressing_mode: AddressingMode::Absolute_X},
+        Instruction {opcode: 0x1B, name: "SLO", bytes: 3, addressing_mode: AddressingMode::Absolute_Y},
+        Instruction {opcode: 0x03, name: "SLO", bytes: 2, addressing_mode: AddressingMode::Indexed_Indirect_X},
+        Instruction {opcode: 0x13, name: "SLO", bytes: 2, addressing_mode: AddressingMode::Indirect_indexed_Y},
         ]
     .into_iter()
     .map(|instruction| (instruction.opcode, instruction))

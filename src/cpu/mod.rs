@@ -153,6 +153,7 @@ impl CPU {
             "SBC" => self.sbc(&instruction.addressing_mode),
             "SEC" => self.sec(),
             "SED" => self.sed(),
+            "SLO" => self.slo(&instruction.addressing_mode),
             "SEI" => self.sei(),
             "STA" => self.sta(&instruction.addressing_mode),
             "STX" => self.stx(&instruction.addressing_mode),
@@ -293,16 +294,10 @@ impl CPU {
                 ])
             }
             AddressingMode::Indexed_Indirect_X => {
-                let indirect_address = self
-                    .bus
-                    .lock()
-                    .unwrap()
-                    .mem_read(self.program_counter)
-                    .wrapping_add(self.register_x);
-                self.bus
-                    .lock()
-                    .unwrap()
-                    .zero_page_read_u16(indirect_address)
+                let indirect_address = self.bus.lock().unwrap().mem_read(self.program_counter);
+                let inc_address = indirect_address.wrapping_add(self.register_x);
+                let address = self.bus.lock().unwrap().zero_page_read_u16(inc_address);
+                return address;
             }
             AddressingMode::Indirect_indexed_Y => {
                 let indirect_address = self.bus.lock().unwrap().mem_read(self.program_counter);
@@ -830,6 +825,34 @@ impl CPU {
 
     fn sed(&mut self) {
         self.set_flag(STATUS_FLAG_MASK_DECIMAL);
+    }
+
+    fn slo(&mut self, addressing_mode: &AddressingMode) {
+        // executes an asl followed by ora
+
+        let operand = self.get_operand(addressing_mode);
+        let operand_most_significant_bit = (operand & 0b1000_0000) >> 7;
+        let result = operand << 1;
+
+        match addressing_mode {
+            AddressingMode::Accumulator => {
+                self.register_a = result;
+            }
+            _ => {
+                let operand_address = self.get_operand_address(addressing_mode);
+                self.bus.lock().unwrap().mem_write(operand_address, result);
+            }
+        }
+
+        if operand_most_significant_bit == 1 {
+            self.set_flag(STATUS_FLAG_MASK_CARRY);
+        } else {
+            self.clear_flag(STATUS_FLAG_MASK_CARRY);
+        }
+
+        self.register_a = self.register_a | result;
+        self.update_zero_flag(self.register_a);
+        self.update_negative_flag(self.register_a);
     }
 
     fn sei(&mut self) {
@@ -1424,21 +1447,28 @@ mod test_cpu {
 
     #[test_case("submodules/65x02/nes6502/v1/00.json")]
     #[test_case("submodules/65x02/nes6502/v1/01.json")]
+    #[test_case("submodules/65x02/nes6502/v1/03.json")]
     #[test_case("submodules/65x02/nes6502/v1/05.json")]
     #[test_case("submodules/65x02/nes6502/v1/06.json")]
+    #[test_case("submodules/65x02/nes6502/v1/07.json")]
     #[test_case("submodules/65x02/nes6502/v1/08.json")]
     #[test_case("submodules/65x02/nes6502/v1/09.json")]
     #[test_case("submodules/65x02/nes6502/v1/0a.json")]
     #[test_case("submodules/65x02/nes6502/v1/0d.json")]
     #[test_case("submodules/65x02/nes6502/v1/0e.json")]
+    #[test_case("submodules/65x02/nes6502/v1/0f.json")]
     #[test_case("submodules/65x02/nes6502/v1/10.json")]
     #[test_case("submodules/65x02/nes6502/v1/11.json")]
+    #[test_case("submodules/65x02/nes6502/v1/13.json")]
     #[test_case("submodules/65x02/nes6502/v1/15.json")]
     #[test_case("submodules/65x02/nes6502/v1/16.json")]
+    #[test_case("submodules/65x02/nes6502/v1/17.json")]
     #[test_case("submodules/65x02/nes6502/v1/18.json")]
     #[test_case("submodules/65x02/nes6502/v1/19.json")]
+    #[test_case("submodules/65x02/nes6502/v1/1b.json")]
     #[test_case("submodules/65x02/nes6502/v1/1d.json")]
     #[test_case("submodules/65x02/nes6502/v1/1e.json")]
+    #[test_case("submodules/65x02/nes6502/v1/1f.json")]
     #[test_case("submodules/65x02/nes6502/v1/20.json")]
     #[test_case("submodules/65x02/nes6502/v1/21.json")]
     #[test_case("submodules/65x02/nes6502/v1/24.json")]
@@ -1644,5 +1674,13 @@ mod test_cpu {
             );
         }
         return cpu;
+    }
+
+    #[test]
+    fn test_example() {
+        let test_case  = "{ \"name\": \"03 6e 78\", \"initial\": { \"pc\": 63085, \"s\": 16, \"a\": 140, \"x\": 122, \"y\": 205, \"p\": 38, \"ram\": [ [63085, 3], [63086, 110], [63087, 120], [110, 248], [232, 110], [233, 246]]}, \"final\": { \"pc\": 63087, \"s\": 16, \"a\": 220, \"x\": 122, \"y\": 205, \"p\": 164, \"ram\": [ [110, 248], [232, 110], [233, 246], [63085, 3], [63086, 220], [63087, 120]]}, \"cycles\": [ [63085, 3, \"read\"], [63086, 110, \"read\"], [110, 248, \"read\"], [232, 110, \"read\"], [233, 246, \"read\"], [63086, 110, \"read\"], [63086, 110, \"write\"], [63086, 220, \"write\"]] }";
+        let json_value = json::parse(test_case).unwrap();
+        // println!("{json_value}");
+        run_test(&json_value);
     }
 }
