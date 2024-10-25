@@ -2,7 +2,7 @@
 pub enum Mirroring {
     VERTICAL,
     HORIZONTAL,
-    FOUR_SCREEN
+    FOUR_SCREEN,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -14,19 +14,24 @@ pub struct Rom {
 }
 
 impl Rom {
-    pub fn new(prg_rom: Vec<u8>, chr_rom: Vec<u8>, mapper: u8, screen_mirroring: Mirroring)-> Self {
+    pub fn new(
+        prg_rom: Vec<u8>,
+        chr_rom: Vec<u8>,
+        mapper: u8,
+        screen_mirroring: Mirroring,
+    ) -> Self {
         Rom {
             prg_rom: prg_rom,
             chr_rom: chr_rom,
             mapper: mapper,
-            screen_mirroring: screen_mirroring
+            screen_mirroring: screen_mirroring,
         }
     }
 }
 
 impl TryFrom<&Vec<u8>> for Rom {
     type Error = String;
-    
+
     fn try_from(raw: &Vec<u8>) -> Result<Self, Self::Error> {
         if &raw[0..4] != vec![0x4E, 0x45, 0x53, 0x1A] {
             return Err("File is not in iNES file format".to_string());
@@ -42,13 +47,13 @@ impl TryFrom<&Vec<u8>> for Rom {
 
         let is_mirroring_four_screen = raw[6] & 0b1000 != 0;
         let is_mirroring_vertical = raw[6] & 0b1 != 0;
-        
+
         let mirroring = match (is_mirroring_four_screen, is_mirroring_vertical) {
             (true, _) => Mirroring::FOUR_SCREEN,
             (false, true) => Mirroring::VERTICAL,
-            (false, false) => Mirroring::HORIZONTAL
+            (false, false) => Mirroring::HORIZONTAL,
         };
-        
+
         println!("Dump file size: {}", raw.len());
         const PRG_ROM_PAGE_BYTES: usize = 16384;
         let prg_rom_size = raw[4] as usize * PRG_ROM_PAGE_BYTES;
@@ -61,16 +66,16 @@ impl TryFrom<&Vec<u8>> for Rom {
 
         let prg_rom_start = match has_trainer {
             true => 528,
-            false => 16
+            false => 16,
         };
 
         let chr_rom_start = prg_rom_start + prg_rom_size;
 
         Ok(Rom {
             prg_rom: raw[prg_rom_start..(prg_rom_start + prg_rom_size)].to_vec(),
-            chr_rom: raw[chr_rom_start..(chr_rom_start + chr_rom_size )].to_vec(),
+            chr_rom: raw[chr_rom_start..(chr_rom_start + chr_rom_size)].to_vec(),
             mapper: mapper,
-            screen_mirroring: mirroring
+            screen_mirroring: mirroring,
         })
     }
 }
