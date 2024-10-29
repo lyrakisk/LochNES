@@ -1,6 +1,16 @@
+use crate::cpu::{FlagStates, CPU};
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
 
+const STATUS_FLAG_MASK_NEGATIVE: u8 = 0b10000000;
+const STATUS_FLAG_MASK_OVERFLOW: u8 = 0b01000000;
+const STATUS_FLAG_MASK_BREAK_COMMAND: u8 = 0b0001_0000;
+const STATUS_FLAG_MASK_DECIMAL: u8 = 0b0000_1000;
+const STATUS_FLAG_INTERRUPT_DISABLE: u8 = 0b0000_0100;
+const STATUS_FLAG_MASK_ZERO: u8 = 0b00000010;
+const STATUS_FLAG_MASK_CARRY: u8 = 0b00000001;
+
+// todo: Move to different module
 #[derive(Clone, Debug)]
 #[allow(non_camel_case_types)]
 pub enum AddressingMode {
@@ -27,6 +37,74 @@ pub struct Instruction {
     pub addressing_mode: AddressingMode,
 }
 
+impl Instruction {
+    pub fn execute(&self, cpu: &mut CPU) -> InstructionResult {
+        match self.name {
+            "ADC" => adc(self, cpu),
+            "AND" => and(self, cpu),
+            "ASL" => asl(self, cpu),
+            "BCC" => bcc(self, cpu),
+            "BCS" => bcs(self, cpu),
+            "BEQ" => beq(self, cpu),
+            "BIT" => bit(self, cpu),
+            "BMI" => bmi(self, cpu),
+            "BNE" => bne(self, cpu),
+            "BPL" => bpl(self, cpu),
+            "BVC" => bvc(self, cpu),
+            "BVS" => bvs(self, cpu),
+            "CLC" => clc(self, cpu),
+            "CLD" => cld(self, cpu),
+            "CLI" => cli(self, cpu),
+            "CLV" => clv(self, cpu),
+            "CMP" => cmp(self, cpu),
+            "CPX" => cpx(self, cpu),
+            "CPY" => cpy(self, cpu),
+            "DEC" => dec(self, cpu),
+            "DEX" => dex(self, cpu),
+            "DEY" => dey(self, cpu),
+            "EOR" => eor(self, cpu),
+            "BRK" => brk(self, cpu),
+            "LDA" => lda(self, cpu),
+            "LDX" => ldx(self, cpu),
+            "LDY" => ldy(self, cpu),
+            "LSR" => lsr(self, cpu),
+            "NOP" => nop(self, cpu),
+            "JMP" => jmp(self, cpu),
+            "JSR" => jsr(self, cpu),
+            "ORA" => ora(self, cpu),
+            "PHA" => pha(self, cpu),
+            "PHP" => php(self, cpu),
+            "PLA" => pla(self, cpu),
+            "PLP" => plp(self, cpu),
+            "INC" => inc(self, cpu),
+            "INX" => inx(self, cpu),
+            "INY" => iny(self, cpu),
+            "ROL" => rol(self, cpu),
+            "ROR" => ror(self, cpu),
+            "RTI" => rti(self, cpu),
+            "RTS" => rts(self, cpu),
+            "SBC" => sbc(self, cpu),
+            "SEC" => sec(self, cpu),
+            "SED" => sed(self, cpu),
+            "SLO" => slo(self, cpu),
+            "SEI" => sei(self, cpu),
+            "STA" => sta(self, cpu),
+            "STX" => stx(self, cpu),
+            "STY" => sty(self, cpu),
+            "TAX" => tax(self, cpu),
+            "TAY" => tay(self, cpu),
+            "TSX" => tsx(self, cpu),
+            "TXA" => txa(self, cpu),
+            "TXS" => txs(self, cpu),
+            "TYA" => tya(self, cpu),
+            _ => panic!(),
+        }
+    }
+}
+
+pub struct InstructionResult {
+    executed_cycles: u8,
+}
 #[rustfmt::skip]
 pub static INSTRUCTIONS: Lazy<HashMap<u8, Instruction>> = Lazy::new(|| {
     vec![
@@ -195,3 +273,669 @@ pub static INSTRUCTIONS: Lazy<HashMap<u8, Instruction>> = Lazy::new(|| {
     .map(|instruction| (instruction.opcode, instruction))
     .collect()
 });
+
+fn adc(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    let operand = cpu.get_operand(&instruction.addressing_mode);
+    let register_a_sign = cpu.register_a & 0b1000_0000;
+    let operand_sign = operand & 0b1000_0000;
+    let carry = cpu.get_flag_state(STATUS_FLAG_MASK_CARRY);
+    let (temp_sum, overflow_occured_on_first_addition) = cpu.register_a.overflowing_add(operand);
+    let (final_sum, overflow_occured_on_second_addition) = temp_sum.overflowing_add(carry as u8);
+    cpu.register_a = final_sum;
+    if overflow_occured_on_first_addition || overflow_occured_on_second_addition {
+        cpu.set_flag(STATUS_FLAG_MASK_CARRY);
+        cpu.set_flag(STATUS_FLAG_MASK_OVERFLOW);
+    } else {
+        cpu.clear_flag(STATUS_FLAG_MASK_CARRY)
+    };
+
+    let result_sign = cpu.register_a & 0b1000_0000;
+    if register_a_sign == operand_sign && result_sign != register_a_sign {
+        cpu.set_flag(STATUS_FLAG_MASK_OVERFLOW);
+    } else {
+        cpu.clear_flag(STATUS_FLAG_MASK_OVERFLOW);
+    }
+
+    cpu.update_negative_flag(cpu.register_a);
+    cpu.update_zero_flag(cpu.register_a);
+    return instruction_result;
+}
+
+fn and(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    let operand = cpu.get_operand(&instruction.addressing_mode);
+    cpu.register_a = cpu.register_a & operand;
+    cpu.update_zero_flag(cpu.register_a);
+    cpu.update_negative_flag(cpu.register_a);
+    return instruction_result;
+}
+
+fn asl(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    // code duplication, almost identical to lsr
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    let operand = cpu.get_operand(&instruction.addressing_mode);
+    let operand_most_significant_bit = (operand & 0b1000_0000) >> 7;
+    let result = operand << 1;
+
+    match instruction.addressing_mode {
+        AddressingMode::Accumulator => {
+            cpu.register_a = result;
+        }
+        _ => {
+            let operand_address = cpu.get_operand_address(&instruction.addressing_mode);
+            cpu.bus.lock().unwrap().mem_write(operand_address, result);
+        }
+    }
+
+    cpu.update_zero_flag(result);
+    cpu.update_negative_flag(result);
+
+    if operand_most_significant_bit == 1 {
+        cpu.set_flag(STATUS_FLAG_MASK_CARRY);
+    } else {
+        cpu.clear_flag(STATUS_FLAG_MASK_CARRY);
+    }
+    return instruction_result;
+}
+
+fn bcc(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    match cpu.get_flag_state(STATUS_FLAG_MASK_CARRY) {
+        FlagStates::CLEAR => {
+            let distance = cpu.bus.lock().unwrap().mem_read(cpu.program_counter);
+            cpu.branch_off_program_counter(distance as u16);
+        }
+        FlagStates::SET => (),
+    }
+    return instruction_result;
+}
+
+fn bcs(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    match cpu.get_flag_state(STATUS_FLAG_MASK_CARRY) {
+        FlagStates::SET => {
+            let distance = cpu.bus.lock().unwrap().mem_read(cpu.program_counter);
+            cpu.branch_off_program_counter(distance as u16);
+        }
+        FlagStates::CLEAR => (),
+    }
+    return instruction_result;
+}
+
+fn beq(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    match cpu.get_flag_state(STATUS_FLAG_MASK_ZERO) {
+        FlagStates::SET => {
+            let distance = cpu.bus.lock().unwrap().mem_read(cpu.program_counter);
+            cpu.branch_off_program_counter(distance as u16);
+        }
+        FlagStates::CLEAR => (),
+    }
+    return instruction_result;
+}
+
+fn bit(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    let operand = cpu.get_operand(&instruction.addressing_mode);
+    let result = cpu.register_a & operand;
+
+    cpu.update_zero_flag(result);
+    cpu.update_negative_flag(operand);
+
+    if operand & 0b0100_0000 == 0b0100_0000 {
+        cpu.set_flag(STATUS_FLAG_MASK_OVERFLOW);
+    } else {
+        cpu.clear_flag(STATUS_FLAG_MASK_OVERFLOW);
+    }
+    return instruction_result;
+}
+
+fn bmi(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    match cpu.get_flag_state(STATUS_FLAG_MASK_NEGATIVE) {
+        FlagStates::SET => {
+            let distance = cpu.bus.lock().unwrap().mem_read(cpu.program_counter);
+            cpu.branch_off_program_counter(distance as u16);
+        }
+        FlagStates::CLEAR => (),
+    }
+    return instruction_result;
+}
+
+fn bne(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    match cpu.get_flag_state(STATUS_FLAG_MASK_ZERO) {
+        FlagStates::CLEAR => {
+            let distance = cpu.bus.lock().unwrap().mem_read(cpu.program_counter);
+            cpu.branch_off_program_counter(distance as u16);
+        }
+        FlagStates::SET => (),
+    }
+    return instruction_result;
+}
+
+fn bpl(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    match cpu.get_flag_state(STATUS_FLAG_MASK_NEGATIVE) {
+        FlagStates::CLEAR => {
+            let distance = cpu.bus.lock().unwrap().mem_read(cpu.program_counter);
+            cpu.branch_off_program_counter(distance as u16);
+        }
+        FlagStates::SET => (),
+    }
+    return instruction_result;
+}
+
+fn bvc(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    match cpu.get_flag_state(STATUS_FLAG_MASK_OVERFLOW) {
+        FlagStates::CLEAR => {
+            let distance = cpu.bus.lock().unwrap().mem_read(cpu.program_counter);
+            cpu.branch_off_program_counter(distance as u16);
+        }
+        FlagStates::SET => (),
+    }
+    return instruction_result;
+}
+
+fn bvs(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    match cpu.get_flag_state(STATUS_FLAG_MASK_OVERFLOW) {
+        FlagStates::SET => {
+            let distance = cpu.bus.lock().unwrap().mem_read(cpu.program_counter);
+            cpu.branch_off_program_counter(distance as u16);
+        }
+        FlagStates::CLEAR => (),
+    }
+    return instruction_result;
+}
+
+fn brk(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    let interrupt_vector = cpu.bus.lock().unwrap().mem_read_u16(0xFFFE);
+    cpu.stack_push_u16(cpu.program_counter.wrapping_add(1));
+    cpu.stack_push(cpu.status | 0b0001_0000);
+    cpu.set_flag(STATUS_FLAG_INTERRUPT_DISABLE);
+    cpu.program_counter = interrupt_vector;
+    return instruction_result;
+}
+
+fn clc(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    cpu.clear_flag(STATUS_FLAG_MASK_CARRY);
+    return instruction_result;
+}
+
+fn cld(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    cpu.clear_flag(STATUS_FLAG_MASK_DECIMAL);
+    return instruction_result;
+}
+
+fn cli(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    cpu.clear_flag(STATUS_FLAG_INTERRUPT_DISABLE);
+    return instruction_result;
+}
+fn clv(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    cpu.clear_flag(STATUS_FLAG_MASK_OVERFLOW);
+    return instruction_result;
+}
+
+fn cmp(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    let (result, overflow_occured) = cpu
+        .register_a
+        .overflowing_sub(cpu.get_operand(&instruction.addressing_mode));
+
+    if overflow_occured {
+        cpu.clear_flag(STATUS_FLAG_MASK_CARRY);
+    } else {
+        cpu.set_flag(STATUS_FLAG_MASK_CARRY);
+    }
+
+    cpu.update_zero_flag(result);
+    cpu.update_negative_flag(result);
+    return instruction_result;
+}
+
+fn cpx(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    // todo: remove code duplication, almost similar to cmp, cpy
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    let (result, overflow_occured) = cpu
+        .register_x
+        .overflowing_sub(cpu.get_operand(&instruction.addressing_mode));
+
+    if overflow_occured {
+        cpu.clear_flag(STATUS_FLAG_MASK_CARRY);
+    } else {
+        cpu.set_flag(STATUS_FLAG_MASK_CARRY);
+    }
+
+    cpu.update_zero_flag(result);
+    cpu.update_negative_flag(result);
+    return instruction_result;
+}
+
+fn cpy(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    // todo: remove code duplication, almost similar to cmp, cpx
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    let (result, overflow_occured) = cpu
+        .register_y
+        .overflowing_sub(cpu.get_operand(&instruction.addressing_mode));
+
+    if overflow_occured {
+        cpu.clear_flag(STATUS_FLAG_MASK_CARRY);
+    } else {
+        cpu.set_flag(STATUS_FLAG_MASK_CARRY);
+    }
+
+    cpu.update_zero_flag(result);
+    cpu.update_negative_flag(result);
+    return instruction_result;
+}
+
+fn dec(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    let address = cpu.get_operand_address(&instruction.addressing_mode);
+    let result = cpu.bus.lock().unwrap().mem_read(address).wrapping_sub(1);
+    cpu.bus.lock().unwrap().mem_write(address, result);
+    cpu.update_zero_flag(result);
+    cpu.update_negative_flag(result);
+    return instruction_result;
+}
+
+fn dex(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    cpu.register_x = cpu.register_x.wrapping_sub(1);
+    cpu.update_zero_flag(cpu.register_x);
+    cpu.update_negative_flag(cpu.register_x);
+    return instruction_result;
+}
+
+fn dey(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    cpu.register_y = cpu.register_y.wrapping_sub(1);
+    cpu.update_zero_flag(cpu.register_y);
+    cpu.update_negative_flag(cpu.register_y);
+    return instruction_result;
+}
+
+fn eor(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    let operand = cpu.get_operand(&instruction.addressing_mode);
+    cpu.register_a = cpu.register_a ^ operand;
+    cpu.update_zero_flag(cpu.register_a);
+    cpu.update_negative_flag(cpu.register_a);
+    return instruction_result;
+}
+
+fn lda(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    // todo: remove duplicate code, same as ldx() and ldy()
+    let operand = cpu.get_operand(&instruction.addressing_mode);
+    cpu.register_a = operand;
+    cpu.update_zero_flag(cpu.register_a);
+    cpu.update_negative_flag(cpu.register_a);
+    return instruction_result;
+}
+
+fn ldx(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    let operand = cpu.get_operand(&instruction.addressing_mode);
+    cpu.register_x = operand;
+    cpu.update_zero_flag(cpu.register_x);
+    cpu.update_negative_flag(cpu.register_x);
+    return instruction_result;
+}
+
+fn ldy(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    let operand = cpu.get_operand(&instruction.addressing_mode);
+    cpu.register_y = operand;
+    cpu.update_zero_flag(cpu.register_y);
+    cpu.update_negative_flag(cpu.register_y);
+    return instruction_result;
+}
+
+fn lsr(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    let operand = cpu.get_operand(&instruction.addressing_mode);
+    let operand_least_significant_bit = operand & 0b0000_0001;
+    let result = operand >> 1;
+
+    match instruction.addressing_mode {
+        AddressingMode::Accumulator => {
+            cpu.register_a = result;
+        }
+        _ => {
+            let address = cpu.get_operand_address(&instruction.addressing_mode);
+            cpu.bus.lock().unwrap().mem_write(address, result);
+        }
+    }
+
+    cpu.update_zero_flag(result);
+    cpu.update_negative_flag(result);
+
+    if operand_least_significant_bit == 1 {
+        cpu.set_flag(STATUS_FLAG_MASK_CARRY);
+    } else {
+        cpu.clear_flag(STATUS_FLAG_MASK_CARRY);
+    }
+    return instruction_result;
+}
+
+fn ora(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    let operand = cpu.get_operand(&instruction.addressing_mode);
+    cpu.register_a = cpu.register_a | operand;
+    cpu.update_zero_flag(cpu.register_a);
+    cpu.update_negative_flag(cpu.register_a);
+    return instruction_result;
+}
+
+fn pha(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    cpu.stack_push(cpu.register_a);
+    return instruction_result;
+}
+
+fn php(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    cpu.stack_push(cpu.status | 0b0001_0000);
+    return instruction_result;
+}
+
+fn plp(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    cpu.status = cpu.stack_pop() | 0b0010_0000;
+    // NesDev reference says that this flag should be set from stack,
+    // but the test suite only passes if I clear it here.
+    cpu.clear_flag(STATUS_FLAG_MASK_BREAK_COMMAND);
+    return instruction_result;
+}
+
+fn pla(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    cpu.register_a = cpu.stack_pop();
+
+    cpu.update_zero_flag(cpu.register_a);
+    cpu.update_negative_flag(cpu.register_a);
+    return instruction_result;
+}
+
+fn inc(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    let address = cpu.get_operand_address(&instruction.addressing_mode);
+    let result = cpu.bus.lock().unwrap().mem_read(address).wrapping_add(1);
+    cpu.bus.lock().unwrap().mem_write(address, result);
+    cpu.update_zero_flag(result);
+    cpu.update_negative_flag(result);
+    return instruction_result;
+}
+
+fn inx(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    cpu.register_x = cpu.register_x.wrapping_add(1);
+    cpu.update_zero_flag(cpu.register_x);
+    cpu.update_negative_flag(cpu.register_x);
+    return instruction_result;
+}
+
+fn iny(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    cpu.register_y = cpu.register_y.wrapping_add(1);
+    cpu.update_zero_flag(cpu.register_y);
+    cpu.update_negative_flag(cpu.register_y);
+    return instruction_result;
+}
+
+fn rol(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    let carry = cpu.get_flag_state(STATUS_FLAG_MASK_CARRY);
+
+    let operand = cpu.get_operand(&instruction.addressing_mode);
+    let operand_most_significant_bit = (operand & 0b1000_0000) >> 7;
+    let mut result = operand << 1;
+
+    match carry {
+        FlagStates::SET => {
+            result = result | 0b0000_0001;
+        }
+        FlagStates::CLEAR => {
+            result = result & 0b1111_1110;
+        }
+    }
+
+    match instruction.addressing_mode {
+        AddressingMode::Accumulator => {
+            cpu.register_a = result;
+        }
+        _ => {
+            let address = cpu.get_operand_address(&instruction.addressing_mode);
+            cpu.bus.lock().unwrap().mem_write(address, result);
+        }
+    }
+
+    cpu.update_zero_flag(result);
+    cpu.update_negative_flag(result);
+
+    if operand_most_significant_bit == 1 {
+        cpu.set_flag(STATUS_FLAG_MASK_CARRY);
+    } else {
+        cpu.clear_flag(STATUS_FLAG_MASK_CARRY);
+    }
+    return instruction_result;
+}
+
+fn ror(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    let carry = cpu.get_flag_state(STATUS_FLAG_MASK_CARRY);
+
+    let operand = cpu.get_operand(&instruction.addressing_mode);
+    let operand_least_significant_bit = operand & 0b0000_0001;
+    let mut result = operand >> 1;
+
+    match carry {
+        FlagStates::SET => {
+            result = result | 0b1000_0000;
+        }
+        FlagStates::CLEAR => {
+            result = result & 0b0111_1111;
+        }
+    }
+
+    match instruction.addressing_mode {
+        AddressingMode::Accumulator => {
+            cpu.register_a = result;
+        }
+        _ => {
+            let address = cpu.get_operand_address(&instruction.addressing_mode);
+            cpu.bus.lock().unwrap().mem_write(address, result);
+        }
+    }
+
+    cpu.update_zero_flag(result);
+    cpu.update_negative_flag(result);
+
+    if operand_least_significant_bit == 1 {
+        cpu.set_flag(STATUS_FLAG_MASK_CARRY);
+    } else {
+        cpu.clear_flag(STATUS_FLAG_MASK_CARRY);
+    }
+    return instruction_result;
+}
+
+fn rti(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    cpu.status = cpu.stack_pop() | 0b0010_0000 & 0b1110_1111;
+    cpu.program_counter = cpu.stack_pop_u16().wrapping_sub(1);
+    cpu.clear_flag(STATUS_FLAG_MASK_BREAK_COMMAND);
+    return instruction_result;
+}
+fn rts(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    cpu.program_counter = cpu.stack_pop_u16();
+    return instruction_result;
+}
+
+fn nop(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    return InstructionResult { executed_cycles: 0 };
+}
+fn jmp(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    cpu.program_counter = cpu.get_operand_address(&instruction.addressing_mode);
+    return instruction_result;
+}
+
+fn jsr(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    // Program counter is incremented instead of decremented as requested in the nesdev reference
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    cpu.stack_push_u16(cpu.program_counter.wrapping_add(1));
+    cpu.program_counter = cpu.get_operand_address(&instruction.addressing_mode);
+    return instruction_result;
+}
+
+fn sbc(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    let operand = !cpu.get_operand(&instruction.addressing_mode);
+    let register_a_sign = cpu.register_a & 0b1000_0000;
+    let operand_sign = operand & 0b1000_0000;
+    let carry = cpu.get_flag_state(STATUS_FLAG_MASK_CARRY) as u8;
+    let (temp_sum, overflow_occured_on_first_addition) = cpu.register_a.overflowing_add(operand);
+    let (final_sum, overflow_occured_on_second_addition) = temp_sum.overflowing_add(carry);
+    cpu.register_a = final_sum;
+    if overflow_occured_on_first_addition || overflow_occured_on_second_addition {
+        cpu.set_flag(STATUS_FLAG_MASK_CARRY);
+        cpu.set_flag(STATUS_FLAG_MASK_OVERFLOW);
+    } else {
+        cpu.clear_flag(STATUS_FLAG_MASK_CARRY)
+    };
+
+    let result_sign = cpu.register_a & 0b1000_0000;
+    if register_a_sign == operand_sign && result_sign != register_a_sign {
+        cpu.set_flag(STATUS_FLAG_MASK_OVERFLOW);
+    } else {
+        cpu.clear_flag(STATUS_FLAG_MASK_OVERFLOW);
+    }
+
+    cpu.update_negative_flag(cpu.register_a);
+    cpu.update_zero_flag(cpu.register_a);
+    return instruction_result;
+}
+
+fn sec(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    cpu.set_flag(STATUS_FLAG_MASK_CARRY);
+    return instruction_result;
+}
+
+fn sed(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    cpu.set_flag(STATUS_FLAG_MASK_DECIMAL);
+    return instruction_result;
+}
+
+fn slo(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    // executes an asl followed by ora
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    let operand = cpu.get_operand(&instruction.addressing_mode);
+    let operand_most_significant_bit = (operand & 0b1000_0000) >> 7;
+    let result = operand << 1;
+
+    match instruction.addressing_mode {
+        AddressingMode::Accumulator => {
+            cpu.register_a = result;
+        }
+        _ => {
+            let operand_address = cpu.get_operand_address(&instruction.addressing_mode);
+            cpu.bus.lock().unwrap().mem_write(operand_address, result);
+        }
+    }
+
+    if operand_most_significant_bit == 1 {
+        cpu.set_flag(STATUS_FLAG_MASK_CARRY);
+    } else {
+        cpu.clear_flag(STATUS_FLAG_MASK_CARRY);
+    }
+
+    cpu.register_a = cpu.register_a | result;
+    cpu.update_zero_flag(cpu.register_a);
+    cpu.update_negative_flag(cpu.register_a);
+    return instruction_result;
+}
+
+fn sei(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    cpu.set_flag(STATUS_FLAG_INTERRUPT_DISABLE);
+    return instruction_result;
+}
+fn sta(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    let address = cpu.get_operand_address(&instruction.addressing_mode);
+    cpu.bus.lock().unwrap().mem_write(address, cpu.register_a);
+    return instruction_result;
+}
+
+fn stx(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    let address = cpu.get_operand_address(&instruction.addressing_mode);
+    cpu.bus.lock().unwrap().mem_write(address, cpu.register_x);
+    return instruction_result;
+}
+fn sty(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    let address = cpu.get_operand_address(&instruction.addressing_mode);
+    cpu.bus.lock().unwrap().mem_write(address, cpu.register_y);
+    return instruction_result;
+}
+
+fn tax(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    cpu.register_x = cpu.register_a;
+
+    cpu.update_zero_flag(cpu.register_x);
+    cpu.update_negative_flag(cpu.register_x);
+    return instruction_result;
+}
+
+fn tay(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    cpu.register_y = cpu.register_a;
+
+    cpu.update_zero_flag(cpu.register_y);
+    cpu.update_negative_flag(cpu.register_y);
+    return instruction_result;
+}
+
+fn tsx(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    cpu.register_x = cpu.stack_pointer;
+    cpu.update_zero_flag(cpu.register_x);
+    cpu.update_negative_flag(cpu.register_x);
+    return instruction_result;
+}
+
+fn txa(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    cpu.register_a = cpu.register_x;
+    cpu.update_zero_flag(cpu.register_a);
+    cpu.update_negative_flag(cpu.register_a);
+    return instruction_result;
+}
+
+fn txs(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    cpu.stack_pointer = cpu.register_x;
+    return instruction_result;
+}
+
+fn tya(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let instruction_result: InstructionResult = InstructionResult { executed_cycles: 0 };
+    cpu.register_a = cpu.register_y;
+    cpu.update_zero_flag(cpu.register_a);
+    cpu.update_negative_flag(cpu.register_a);
+    return instruction_result;
+}
