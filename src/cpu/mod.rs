@@ -219,7 +219,7 @@ impl CPU {
                 //  but the second byte will be at $0200 instead of $0300.
                 //  From the extensive test cases on 6c.json, check example `6c ff f5`.
                 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-                let high_order_address = match indirect_adress & 0b0000_0000_1111_1111 {
+                let high_order_address = match indirect_adress & 0x00FF {
                     0xFF => indirect_adress & 0b1111_1111_0000_0000,
                     _ => indirect_adress.wrapping_add(1),
                 };
@@ -264,14 +264,24 @@ impl CPU {
         }
     }
 
-    fn branch_off_program_counter(&mut self, distance: u16) {
+    // todo: separate the check for page crossing
+    fn branch_off_program_counter(&mut self, distance: u8) -> bool {
+        let mut page_crossed = false;
+        let le_bytes = self.program_counter.to_le_bytes();
+        // low is incremented here, because we're at the second
+        // cycle of the instruction which has incremented the PC
+        // as described in https://www.nesdev.org/6502_cpu.txt
+        let low = le_bytes[0].wrapping_add(1);
         if distance > 0x7F {
-            let distance = 0xff_u16.wrapping_sub(distance).wrapping_add(1);
-            self.program_counter = self.program_counter.wrapping_sub(distance);
+            let offset: u8 = 0xff_u8.wrapping_sub(distance).wrapping_add(1);
+            (_, page_crossed) = low.overflowing_sub(offset as u8);
+            self.program_counter = self.program_counter.wrapping_sub(offset as u16);
         } else {
             let distance = distance;
-            self.program_counter = self.program_counter.wrapping_add(distance);
+            (_, page_crossed) = low.overflowing_add(distance as u8);
+            self.program_counter = self.program_counter.wrapping_add(distance as u16);
         }
+        page_crossed
     }
 
     fn update_zero_flag(&mut self, data: u8) {
@@ -602,7 +612,13 @@ mod test_cpu {
 
         let mut cpu = cpu_from_json_value(&test["initial"]);
 
-        cpu.execute_next_instruction();
+        let executed_cycles = cpu.execute_next_instruction().executed_cycles;
+        let expected_cycles = test["cycles"].members().count() as u8;
+        assert_eq!(
+            executed_cycles, expected_cycles,
+            "Executed cycles don't match\n expected: {}\n   actual: {}",
+            expected_cycles, executed_cycles
+        );
 
         assert_eq!(
             cpu.program_counter, final_cpu.program_counter,
