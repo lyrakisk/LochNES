@@ -27,7 +27,7 @@ pub struct CPU {
     status: u8,
     program_counter: u16,
     stack_pointer: u8,
-    pub bus: Arc<Mutex<Bus>>,
+    bus: Arc<Mutex<Bus>>,
 }
 
 impl CPU {
@@ -66,7 +66,7 @@ impl CPU {
         }
     }
 
-    fn execute_next_instruction(&mut self) -> InstructionResult {
+    pub fn execute_next_instruction(&mut self) -> InstructionResult {
         let opcode = self.fetch();
 
         let decoded_opcode = self.decode(opcode);
@@ -655,7 +655,13 @@ mod test_cpu {
     }
 
     fn cpu_from_json_value(json_value: &JsonValue) -> CPU {
-        let bus = Bus::new();
+        let mut bus = Bus::new();
+        for ram_tuple in json_value["ram"].members() {
+            bus.mem_write(
+                ram_tuple[0].as_u16().unwrap(),
+                ram_tuple[1].as_u8().unwrap(),
+            );
+        }
         let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
 
         cpu.program_counter = json_value["pc"].as_u16().unwrap();
@@ -665,12 +671,6 @@ mod test_cpu {
         cpu.register_y = json_value["y"].as_u8().unwrap();
         cpu.stack_pointer = json_value["s"].as_u8().unwrap();
 
-        for ram_tuple in json_value["ram"].members() {
-            cpu.bus.lock().unwrap().mem_write(
-                ram_tuple[0].as_u16().unwrap(),
-                ram_tuple[1].as_u8().unwrap(),
-            );
-        }
         return cpu;
     }
 

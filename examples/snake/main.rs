@@ -35,31 +35,33 @@ fn main() {
 
     let rom_bytes = read(PathBuf::from("examples/snake/snake.nes")).unwrap();
     let rom = Rom::try_from(&rom_bytes).unwrap();
-    let bus = Bus::new();
+    let cpu_bus = Arc::new(Mutex::new(Bus::new()));
 
-    let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
+    let mut cpu = CPU::new(cpu_bus.clone());
 
     println!("rom len: {}", rom.prg_rom.len());
-    cpu.load((rom.prg_rom));
+    cpu.load(rom.prg_rom);
     cpu.reset();
 
-    cpu.run_with_callback(move |cpu| {
-        handle_user_input(cpu, &mut event_pump);
-        cpu.bus
+    loop {
+        handle_user_input(cpu_bus.clone(), &mut event_pump);
+        cpu_bus
             .lock()
             .unwrap()
             .mem_write(0xfe, rng.gen_range(1, 16));
 
-        if read_screen_state(cpu, &mut screen_state) {
+        if read_screen_state(cpu_bus.clone(), &mut screen_state) {
             texture.update(None, &screen_state, 32 * 3).unwrap();
             canvas.copy(&texture, None, None).unwrap();
             canvas.present();
         }
 
-        ::std::thread::sleep(std::time::Duration::new(0, 70_000));
-    });
+        ::std::thread::sleep(std::time::Duration::new(0, 20_000));
+
+        cpu.execute_next_instruction();
+    }
 }
-fn handle_user_input(cpu: &mut CPU, event_pump: &mut EventPump) {
+fn handle_user_input(bus: Arc<Mutex<Bus>>, event_pump: &mut EventPump) {
     for event in event_pump.poll_iter() {
         match event {
             Event::Quit { .. }
@@ -71,25 +73,25 @@ fn handle_user_input(cpu: &mut CPU, event_pump: &mut EventPump) {
                 keycode: Some(Keycode::W),
                 ..
             } => {
-                cpu.bus.lock().unwrap().mem_write(0xff, 0x77);
+                bus.lock().unwrap().mem_write(0xff, 0x77);
             }
             Event::KeyDown {
                 keycode: Some(Keycode::S),
                 ..
             } => {
-                cpu.bus.lock().unwrap().mem_write(0xff, 0x73);
+                bus.lock().unwrap().mem_write(0xff, 0x73);
             }
             Event::KeyDown {
                 keycode: Some(Keycode::A),
                 ..
             } => {
-                cpu.bus.lock().unwrap().mem_write(0xff, 0x61);
+                bus.lock().unwrap().mem_write(0xff, 0x61);
             }
             Event::KeyDown {
                 keycode: Some(Keycode::D),
                 ..
             } => {
-                cpu.bus.lock().unwrap().mem_write(0xff, 0x64);
+                bus.lock().unwrap().mem_write(0xff, 0x64);
             }
             _ => { /* do nothing */ }
         }
@@ -110,11 +112,11 @@ fn color(byte: u8) -> Color {
     }
 }
 
-fn read_screen_state(cpu: &CPU, frame: &mut [u8; 32 * 3 * 32]) -> bool {
+fn read_screen_state(bus: Arc<Mutex<Bus>>, frame: &mut [u8; 32 * 3 * 32]) -> bool {
     let mut frame_idx = 0;
     let mut update = false;
     for i in 0x0200..0x600 {
-        let color_idx = cpu.bus.lock().unwrap().mem_read(i as u16);
+        let color_idx = bus.lock().unwrap().mem_read(i as u16);
         let (b1, b2, b3) = color(color_idx).rgb();
         if frame[frame_idx] != b1 || frame[frame_idx + 1] != b2 || frame[frame_idx + 2] != b3 {
             frame[frame_idx] = b1;
