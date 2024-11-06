@@ -82,6 +82,7 @@ pub struct InstructionResult {
 impl Instruction {
     pub fn execute(&self, cpu: &mut CPU) -> InstructionResult {
         match self.name {
+            "AAC" => aac(self, cpu),
             "ADC" => adc(self, cpu),
             "AND" => and(self, cpu),
             "ASL" => asl(self, cpu),
@@ -301,20 +302,22 @@ pub static INSTRUCTIONS: Lazy<HashMap<u8, Instruction>> = Lazy::new(|| {
         Instruction {opcode: 0x98, name: "TYA", bytes: 1, addressing_mode: AddressingMode::Implicit, cycles: 2},
 
         // Illegal Opcodes
+        Instruction {opcode: 0x0b, name: "AAC", bytes: 2, addressing_mode: AddressingMode::Immediate, cycles: 2},
+        Instruction {opcode: 0x2b, name: "AAC", bytes: 2, addressing_mode: AddressingMode::Immediate, cycles: 2},
         Instruction {opcode: 0x04, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 3},
-        Instruction {opcode: 0x14, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 4},
-        Instruction {opcode: 0x34, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 4},
+        Instruction {opcode: 0x14, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X, cycles: 4},
+        Instruction {opcode: 0x34, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X, cycles: 4},
         Instruction {opcode: 0x44, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 3},
-        Instruction {opcode: 0x54, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 4},
+        Instruction {opcode: 0x54, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X, cycles: 4},
         Instruction {opcode: 0x64, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 3},
-        Instruction {opcode: 0x74, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 4},
-        Instruction {opcode: 0x80, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 2},
-        Instruction {opcode: 0x82, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 2},
-        Instruction {opcode: 0x89, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 2},
-        Instruction {opcode: 0xC2, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 2},
-        Instruction {opcode: 0xD4, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 4},
-        Instruction {opcode: 0xE2, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 2},
-        Instruction {opcode: 0xF4, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 4},
+        Instruction {opcode: 0x74, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X, cycles: 4},
+        Instruction {opcode: 0x80, name: "DOP", bytes: 2, addressing_mode: AddressingMode::Immediate, cycles: 2},
+        Instruction {opcode: 0x82, name: "DOP", bytes: 2, addressing_mode: AddressingMode::Immediate, cycles: 2},
+        Instruction {opcode: 0x89, name: "DOP", bytes: 2, addressing_mode: AddressingMode::Immediate, cycles: 2},
+        Instruction {opcode: 0xC2, name: "DOP", bytes: 2, addressing_mode: AddressingMode::Immediate, cycles: 2},
+        Instruction {opcode: 0xD4, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X, cycles: 4},
+        Instruction {opcode: 0xE2, name: "DOP", bytes: 2, addressing_mode: AddressingMode::Immediate, cycles: 2},
+        Instruction {opcode: 0xF4, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X, cycles: 4},
         Instruction {opcode: 0x07, name: "SLO", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 5},
         Instruction {opcode: 0x17, name: "SLO", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X, cycles: 6},
         Instruction {opcode: 0x0F, name: "SLO", bytes: 3, addressing_mode: AddressingMode::Absolute, cycles: 6},
@@ -328,6 +331,23 @@ pub static INSTRUCTIONS: Lazy<HashMap<u8, Instruction>> = Lazy::new(|| {
     .collect()
 });
 
+fn aac(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let operand = cpu.get_operand(&instruction.addressing_mode);
+    cpu.register_a = cpu.register_a & operand;
+    cpu.update_zero_flag(cpu.register_a);
+    cpu.update_negative_flag(cpu.register_a);
+    match cpu.get_flag_state(STATUS_FLAG_MASK_NEGATIVE) {
+        FlagStates::SET => {
+            cpu.set_flag(STATUS_FLAG_MASK_CARRY);
+        }
+        FlagStates::CLEAR => {
+            cpu.clear_flag(STATUS_FLAG_MASK_CARRY);
+        }
+    }
+    return InstructionResult {
+        executed_cycles: instruction.cycles,
+    };
+}
 fn adc(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     let mut instruction_result = InstructionResult {
         executed_cycles: instruction.cycles,
