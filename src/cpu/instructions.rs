@@ -137,6 +137,7 @@ impl Instruction {
             "STY" => sty(self, cpu),
             "TAX" => tax(self, cpu),
             "TAY" => tay(self, cpu),
+            "TOP" => top(self, cpu),
             "TSX" => tsx(self, cpu),
             "TXA" => txa(self, cpu),
             "TXS" => txs(self, cpu),
@@ -325,6 +326,13 @@ pub static INSTRUCTIONS: Lazy<HashMap<u8, Instruction>> = Lazy::new(|| {
         Instruction {opcode: 0x1B, name: "SLO", bytes: 3, addressing_mode: AddressingMode::Absolute_Y, cycles: 7},
         Instruction {opcode: 0x03, name: "SLO", bytes: 2, addressing_mode: AddressingMode::Indexed_Indirect_X, cycles: 8},
         Instruction {opcode: 0x13, name: "SLO", bytes: 2, addressing_mode: AddressingMode::Indirect_indexed_Y, cycles: 8},
+        Instruction {opcode: 0x0C, name: "TOP", bytes: 3, addressing_mode: AddressingMode::Absolute, cycles: 4},
+        Instruction {opcode: 0x1C, name: "TOP", bytes: 3, addressing_mode: AddressingMode::Absolute_X, cycles: 4},
+        Instruction {opcode: 0x3C, name: "TOP", bytes: 3, addressing_mode: AddressingMode::Absolute_X, cycles: 4},
+        Instruction {opcode: 0x5C, name: "TOP", bytes: 3, addressing_mode: AddressingMode::Absolute_X, cycles: 4},
+        Instruction {opcode: 0x7C, name: "TOP", bytes: 3, addressing_mode: AddressingMode::Absolute_X, cycles: 4},
+        Instruction {opcode: 0xDC, name: "TOP", bytes: 3, addressing_mode: AddressingMode::Absolute_X, cycles: 4},
+        Instruction {opcode: 0xFC, name: "TOP", bytes: 3, addressing_mode: AddressingMode::Absolute_X, cycles: 4},
         ]
     .into_iter()
     .map(|instruction| (instruction.opcode, instruction))
@@ -1084,6 +1092,18 @@ fn tay(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     return InstructionResult {
         executed_cycles: instruction.cycles,
     };
+}
+
+fn top(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    let mut instruction_result = InstructionResult {
+        executed_cycles: instruction.cycles,
+    };
+
+    instruction_result.executed_cycles += instruction.addressing_mode.is_page_crossed(cpu) as u8;
+    nop(instruction, cpu);
+    nop(instruction, cpu);
+    nop(instruction, cpu);
+    return instruction_result;
 }
 
 fn tsx(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
