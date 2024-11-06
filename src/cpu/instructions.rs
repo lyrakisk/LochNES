@@ -104,6 +104,7 @@ impl Instruction {
             "DEC" => dec(self, cpu),
             "DEX" => dex(self, cpu),
             "DEY" => dey(self, cpu),
+            "DOP" => dop(self, cpu),
             "EOR" => eor(self, cpu),
             "BRK" => brk(self, cpu),
             "LDA" => lda(self, cpu),
@@ -300,6 +301,20 @@ pub static INSTRUCTIONS: Lazy<HashMap<u8, Instruction>> = Lazy::new(|| {
         Instruction {opcode: 0x98, name: "TYA", bytes: 1, addressing_mode: AddressingMode::Implicit, cycles: 2},
 
         // Illegal Opcodes
+        Instruction {opcode: 0x04, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 3},
+        Instruction {opcode: 0x14, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 4},
+        Instruction {opcode: 0x34, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 4},
+        Instruction {opcode: 0x44, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 3},
+        Instruction {opcode: 0x54, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 4},
+        Instruction {opcode: 0x64, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 3},
+        Instruction {opcode: 0x74, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 4},
+        Instruction {opcode: 0x80, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 2},
+        Instruction {opcode: 0x82, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 2},
+        Instruction {opcode: 0x89, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 2},
+        Instruction {opcode: 0xC2, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 2},
+        Instruction {opcode: 0xD4, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 4},
+        Instruction {opcode: 0xE2, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 2},
+        Instruction {opcode: 0xF4, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 4},
         Instruction {opcode: 0x07, name: "SLO", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 5},
         Instruction {opcode: 0x17, name: "SLO", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X, cycles: 6},
         Instruction {opcode: 0x0F, name: "SLO", bytes: 3, addressing_mode: AddressingMode::Absolute, cycles: 6},
@@ -655,6 +670,11 @@ fn dey(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     return InstructionResult {
         executed_cycles: instruction.cycles,
     };
+}
+
+fn dop(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    nop(instruction, cpu);
+    nop(instruction, cpu)
 }
 
 fn eor(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
