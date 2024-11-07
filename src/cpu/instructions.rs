@@ -123,6 +123,7 @@ impl Instruction {
             "INC" => inc(self, cpu),
             "INX" => inx(self, cpu),
             "INY" => iny(self, cpu),
+            "RLA" => rla(self, cpu),
             "ROL" => rol(self, cpu),
             "ROR" => ror(self, cpu),
             "RTI" => rti(self, cpu),
@@ -325,6 +326,13 @@ pub static INSTRUCTIONS: Lazy<HashMap<u8, Instruction>> = Lazy::new(|| {
         Instruction {opcode: 0xD4, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X, cycles: 4},
         Instruction {opcode: 0xE2, name: "DOP", bytes: 2, addressing_mode: AddressingMode::Immediate, cycles: 2},
         Instruction {opcode: 0xF4, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X, cycles: 4},
+        Instruction {opcode: 0x27, name: "RLA", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 5},
+        Instruction {opcode: 0x37, name: "RLA", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X, cycles: 6},
+        Instruction {opcode: 0x2F, name: "RLA", bytes: 3, addressing_mode: AddressingMode::Absolute, cycles: 6},
+        Instruction {opcode: 0x3F, name: "RLA", bytes: 3, addressing_mode: AddressingMode::Absolute_X, cycles: 7},
+        Instruction {opcode: 0x3B, name: "RLA", bytes: 3, addressing_mode: AddressingMode::Absolute_Y, cycles: 7},
+        Instruction {opcode: 0x23, name: "RLA", bytes: 2, addressing_mode: AddressingMode::Indexed_Indirect_X, cycles: 8},
+        Instruction {opcode: 0x33, name: "RLA", bytes: 2, addressing_mode: AddressingMode::Indirect_indexed_Y, cycles: 8},
         Instruction {opcode: 0x07, name: "SLO", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 5},
         Instruction {opcode: 0x17, name: "SLO", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X, cycles: 6},
         Instruction {opcode: 0x0F, name: "SLO", bytes: 3, addressing_mode: AddressingMode::Absolute, cycles: 6},
@@ -858,6 +866,42 @@ fn iny(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     cpu.register_y = cpu.register_y.wrapping_add(1);
     cpu.update_zero_flag(cpu.register_y);
     cpu.update_negative_flag(cpu.register_y);
+    return InstructionResult {
+        executed_cycles: instruction.cycles,
+    };
+}
+
+fn rla(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+    // Executes a rol followed by and
+    let carry = cpu.get_flag_state(STATUS_FLAG_MASK_CARRY);
+
+    let operand = cpu.get_operand(&instruction.addressing_mode);
+    let operand_most_significant_bit = (operand & 0b1000_0000) >> 7;
+    let mut result = operand << 1;
+
+    match carry {
+        FlagStates::SET => {
+            result = result | 0b0000_0001;
+        }
+        FlagStates::CLEAR => {
+            result = result & 0b1111_1110;
+        }
+    }
+
+    let address = cpu.get_operand_address(&instruction.addressing_mode);
+    cpu.bus.lock().unwrap().mem_write(address, result);
+
+    cpu.register_a = cpu.register_a & result;
+
+    cpu.update_zero_flag(cpu.register_a);
+    cpu.update_negative_flag(cpu.register_a);
+
+    if operand_most_significant_bit == 1 {
+        cpu.set_flag(STATUS_FLAG_MASK_CARRY);
+    } else {
+        cpu.clear_flag(STATUS_FLAG_MASK_CARRY);
+    }
+
     return InstructionResult {
         executed_cycles: instruction.cycles,
     };
