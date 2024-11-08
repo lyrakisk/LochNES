@@ -1,14 +1,6 @@
-use crate::cpu::{FlagStates, CPU};
+use crate::cpu::*;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
-
-const STATUS_FLAG_MASK_NEGATIVE: u8 = 0b10000000;
-const STATUS_FLAG_MASK_OVERFLOW: u8 = 0b01000000;
-const STATUS_FLAG_MASK_BREAK_COMMAND: u8 = 0b0001_0000;
-const STATUS_FLAG_MASK_DECIMAL: u8 = 0b0000_1000;
-const STATUS_FLAG_INTERRUPT_DISABLE: u8 = 0b0000_0100;
-const STATUS_FLAG_MASK_ZERO: u8 = 0b00000010;
-const STATUS_FLAG_MASK_CARRY: u8 = 0b00000001;
 
 // todo: Move to different module
 #[derive(Clone, Debug)]
@@ -358,12 +350,12 @@ fn aac(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     cpu.register_a = cpu.register_a & operand;
     cpu.update_zero_flag(cpu.register_a);
     cpu.update_negative_flag(cpu.register_a);
-    match cpu.get_flag_state(STATUS_FLAG_MASK_NEGATIVE) {
+    match cpu.get_flag_state(STATUS_FLAG_NEGATIVE) {
         FlagStates::SET => {
-            cpu.set_flag(STATUS_FLAG_MASK_CARRY);
+            cpu.set_flag(STATUS_FLAG_CARRY);
         }
         FlagStates::CLEAR => {
-            cpu.clear_flag(STATUS_FLAG_MASK_CARRY);
+            cpu.clear_flag(STATUS_FLAG_CARRY);
         }
     }
     return InstructionResult {
@@ -377,22 +369,22 @@ fn adc(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     let operand = cpu.get_operand(&instruction.addressing_mode);
     let register_a_sign = cpu.register_a & 0b1000_0000;
     let operand_sign = operand & 0b1000_0000;
-    let carry = cpu.get_flag_state(STATUS_FLAG_MASK_CARRY);
+    let carry = cpu.get_flag_state(STATUS_FLAG_CARRY);
     let (temp_sum, overflow_occured_on_first_addition) = cpu.register_a.overflowing_add(operand);
     let (final_sum, overflow_occured_on_second_addition) = temp_sum.overflowing_add(carry as u8);
     cpu.register_a = final_sum;
     if overflow_occured_on_first_addition || overflow_occured_on_second_addition {
-        cpu.set_flag(STATUS_FLAG_MASK_CARRY);
-        cpu.set_flag(STATUS_FLAG_MASK_OVERFLOW);
+        cpu.set_flag(STATUS_FLAG_CARRY);
+        cpu.set_flag(STATUS_FLAG_OVERFLOW);
     } else {
-        cpu.clear_flag(STATUS_FLAG_MASK_CARRY)
+        cpu.clear_flag(STATUS_FLAG_CARRY)
     };
 
     let result_sign = cpu.register_a & 0b1000_0000;
     if register_a_sign == operand_sign && result_sign != register_a_sign {
-        cpu.set_flag(STATUS_FLAG_MASK_OVERFLOW);
+        cpu.set_flag(STATUS_FLAG_OVERFLOW);
     } else {
-        cpu.clear_flag(STATUS_FLAG_MASK_OVERFLOW);
+        cpu.clear_flag(STATUS_FLAG_OVERFLOW);
     }
 
     cpu.update_negative_flag(cpu.register_a);
@@ -436,9 +428,9 @@ fn asl(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     cpu.update_negative_flag(result);
 
     if operand_most_significant_bit == 1 {
-        cpu.set_flag(STATUS_FLAG_MASK_CARRY);
+        cpu.set_flag(STATUS_FLAG_CARRY);
     } else {
-        cpu.clear_flag(STATUS_FLAG_MASK_CARRY);
+        cpu.clear_flag(STATUS_FLAG_CARRY);
     }
     return instruction_result;
 }
@@ -447,7 +439,7 @@ fn bcc(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     let mut instruction_result = InstructionResult {
         executed_cycles: instruction.cycles,
     };
-    match cpu.get_flag_state(STATUS_FLAG_MASK_CARRY) {
+    match cpu.get_flag_state(STATUS_FLAG_CARRY) {
         FlagStates::CLEAR => {
             let distance = cpu.bus.lock().unwrap().mem_read(cpu.program_counter);
             let page_crossed = cpu.branch_off_program_counter(distance);
@@ -463,7 +455,7 @@ fn bcs(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     let mut instruction_result = InstructionResult {
         executed_cycles: instruction.cycles,
     };
-    match cpu.get_flag_state(STATUS_FLAG_MASK_CARRY) {
+    match cpu.get_flag_state(STATUS_FLAG_CARRY) {
         FlagStates::SET => {
             let distance = cpu.bus.lock().unwrap().mem_read(cpu.program_counter);
             let page_crossed = cpu.branch_off_program_counter(distance);
@@ -479,7 +471,7 @@ fn beq(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     let mut instruction_result = InstructionResult {
         executed_cycles: instruction.cycles,
     };
-    match cpu.get_flag_state(STATUS_FLAG_MASK_ZERO) {
+    match cpu.get_flag_state(STATUS_FLAG_ZERO) {
         FlagStates::SET => {
             let distance = cpu.bus.lock().unwrap().mem_read(cpu.program_counter);
             let page_crossed = cpu.branch_off_program_counter(distance);
@@ -502,9 +494,9 @@ fn bit(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     cpu.update_negative_flag(operand);
 
     if operand & 0b0100_0000 == 0b0100_0000 {
-        cpu.set_flag(STATUS_FLAG_MASK_OVERFLOW);
+        cpu.set_flag(STATUS_FLAG_OVERFLOW);
     } else {
-        cpu.clear_flag(STATUS_FLAG_MASK_OVERFLOW);
+        cpu.clear_flag(STATUS_FLAG_OVERFLOW);
     }
     return instruction_result;
 }
@@ -513,7 +505,7 @@ fn bmi(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     let mut instruction_result = InstructionResult {
         executed_cycles: instruction.cycles,
     };
-    match cpu.get_flag_state(STATUS_FLAG_MASK_NEGATIVE) {
+    match cpu.get_flag_state(STATUS_FLAG_NEGATIVE) {
         FlagStates::SET => {
             let distance = cpu.bus.lock().unwrap().mem_read(cpu.program_counter);
             let page_crossed = cpu.branch_off_program_counter(distance);
@@ -529,7 +521,7 @@ fn bne(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     let mut instruction_result = InstructionResult {
         executed_cycles: instruction.cycles,
     };
-    match cpu.get_flag_state(STATUS_FLAG_MASK_ZERO) {
+    match cpu.get_flag_state(STATUS_FLAG_ZERO) {
         FlagStates::CLEAR => {
             let distance = cpu.bus.lock().unwrap().mem_read(cpu.program_counter);
             let page_crossed = cpu.branch_off_program_counter(distance);
@@ -545,7 +537,7 @@ fn bpl(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     let mut instruction_result = InstructionResult {
         executed_cycles: instruction.cycles,
     };
-    match cpu.get_flag_state(STATUS_FLAG_MASK_NEGATIVE) {
+    match cpu.get_flag_state(STATUS_FLAG_NEGATIVE) {
         FlagStates::CLEAR => {
             let distance = cpu.bus.lock().unwrap().mem_read(cpu.program_counter);
             let page_crossed = cpu.branch_off_program_counter(distance);
@@ -561,7 +553,7 @@ fn bvc(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     let mut instruction_result = InstructionResult {
         executed_cycles: instruction.cycles,
     };
-    match cpu.get_flag_state(STATUS_FLAG_MASK_OVERFLOW) {
+    match cpu.get_flag_state(STATUS_FLAG_OVERFLOW) {
         FlagStates::CLEAR => {
             let distance = cpu.bus.lock().unwrap().mem_read(cpu.program_counter);
             let page_crossed = cpu.branch_off_program_counter(distance);
@@ -577,7 +569,7 @@ fn bvs(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     let mut instruction_result = InstructionResult {
         executed_cycles: instruction.cycles,
     };
-    match cpu.get_flag_state(STATUS_FLAG_MASK_OVERFLOW) {
+    match cpu.get_flag_state(STATUS_FLAG_OVERFLOW) {
         FlagStates::SET => {
             let distance = cpu.bus.lock().unwrap().mem_read(cpu.program_counter);
             let page_crossed = cpu.branch_off_program_counter(distance);
@@ -601,14 +593,14 @@ fn brk(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
 }
 
 fn clc(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
-    cpu.clear_flag(STATUS_FLAG_MASK_CARRY);
+    cpu.clear_flag(STATUS_FLAG_CARRY);
     return InstructionResult {
         executed_cycles: instruction.cycles,
     };
 }
 
 fn cld(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
-    cpu.clear_flag(STATUS_FLAG_MASK_DECIMAL);
+    cpu.clear_flag(STATUS_FLAG_DECIMAL);
     return InstructionResult {
         executed_cycles: instruction.cycles,
     };
@@ -621,7 +613,7 @@ fn cli(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     };
 }
 fn clv(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
-    cpu.clear_flag(STATUS_FLAG_MASK_OVERFLOW);
+    cpu.clear_flag(STATUS_FLAG_OVERFLOW);
     return InstructionResult {
         executed_cycles: instruction.cycles,
     };
@@ -636,9 +628,9 @@ fn cmp(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
         .overflowing_sub(cpu.get_operand(&instruction.addressing_mode));
 
     if overflow_occured {
-        cpu.clear_flag(STATUS_FLAG_MASK_CARRY);
+        cpu.clear_flag(STATUS_FLAG_CARRY);
     } else {
-        cpu.set_flag(STATUS_FLAG_MASK_CARRY);
+        cpu.set_flag(STATUS_FLAG_CARRY);
     }
 
     cpu.update_zero_flag(result);
@@ -654,9 +646,9 @@ fn cpx(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
         .overflowing_sub(cpu.get_operand(&instruction.addressing_mode));
 
     if overflow_occured {
-        cpu.clear_flag(STATUS_FLAG_MASK_CARRY);
+        cpu.clear_flag(STATUS_FLAG_CARRY);
     } else {
-        cpu.set_flag(STATUS_FLAG_MASK_CARRY);
+        cpu.set_flag(STATUS_FLAG_CARRY);
     }
 
     cpu.update_zero_flag(result);
@@ -673,9 +665,9 @@ fn cpy(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
         .overflowing_sub(cpu.get_operand(&instruction.addressing_mode));
 
     if overflow_occured {
-        cpu.clear_flag(STATUS_FLAG_MASK_CARRY);
+        cpu.clear_flag(STATUS_FLAG_CARRY);
     } else {
-        cpu.set_flag(STATUS_FLAG_MASK_CARRY);
+        cpu.set_flag(STATUS_FLAG_CARRY);
     }
 
     cpu.update_zero_flag(result);
@@ -787,9 +779,9 @@ fn lsr(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     cpu.update_negative_flag(result);
 
     if operand_least_significant_bit == 1 {
-        cpu.set_flag(STATUS_FLAG_MASK_CARRY);
+        cpu.set_flag(STATUS_FLAG_CARRY);
     } else {
-        cpu.clear_flag(STATUS_FLAG_MASK_CARRY);
+        cpu.clear_flag(STATUS_FLAG_CARRY);
     }
     return InstructionResult {
         executed_cycles: instruction.cycles,
@@ -826,7 +818,7 @@ fn plp(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     cpu.status = cpu.stack_pop() | 0b0010_0000;
     // NesDev reference says that this flag should be set from stack,
     // but the test suite only passes if I clear it here.
-    cpu.clear_flag(STATUS_FLAG_MASK_BREAK_COMMAND);
+    cpu.clear_flag(STATUS_FLAG_BREAK_COMMAND);
     return InstructionResult {
         executed_cycles: instruction.cycles,
     };
@@ -873,7 +865,7 @@ fn iny(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
 
 fn rla(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     // Executes a rol followed by and
-    let carry = cpu.get_flag_state(STATUS_FLAG_MASK_CARRY);
+    let carry = cpu.get_flag_state(STATUS_FLAG_CARRY);
 
     let operand = cpu.get_operand(&instruction.addressing_mode);
     let operand_most_significant_bit = (operand & 0b1000_0000) >> 7;
@@ -897,9 +889,9 @@ fn rla(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     cpu.update_negative_flag(cpu.register_a);
 
     if operand_most_significant_bit == 1 {
-        cpu.set_flag(STATUS_FLAG_MASK_CARRY);
+        cpu.set_flag(STATUS_FLAG_CARRY);
     } else {
-        cpu.clear_flag(STATUS_FLAG_MASK_CARRY);
+        cpu.clear_flag(STATUS_FLAG_CARRY);
     }
 
     return InstructionResult {
@@ -908,7 +900,7 @@ fn rla(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
 }
 
 fn rol(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
-    let carry = cpu.get_flag_state(STATUS_FLAG_MASK_CARRY);
+    let carry = cpu.get_flag_state(STATUS_FLAG_CARRY);
 
     let operand = cpu.get_operand(&instruction.addressing_mode);
     let operand_most_significant_bit = (operand & 0b1000_0000) >> 7;
@@ -937,9 +929,9 @@ fn rol(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     cpu.update_negative_flag(result);
 
     if operand_most_significant_bit == 1 {
-        cpu.set_flag(STATUS_FLAG_MASK_CARRY);
+        cpu.set_flag(STATUS_FLAG_CARRY);
     } else {
-        cpu.clear_flag(STATUS_FLAG_MASK_CARRY);
+        cpu.clear_flag(STATUS_FLAG_CARRY);
     }
     return InstructionResult {
         executed_cycles: instruction.cycles,
@@ -947,7 +939,7 @@ fn rol(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
 }
 
 fn ror(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
-    let carry = cpu.get_flag_state(STATUS_FLAG_MASK_CARRY);
+    let carry = cpu.get_flag_state(STATUS_FLAG_CARRY);
 
     let operand = cpu.get_operand(&instruction.addressing_mode);
     let operand_least_significant_bit = operand & 0b0000_0001;
@@ -976,9 +968,9 @@ fn ror(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     cpu.update_negative_flag(result);
 
     if operand_least_significant_bit == 1 {
-        cpu.set_flag(STATUS_FLAG_MASK_CARRY);
+        cpu.set_flag(STATUS_FLAG_CARRY);
     } else {
-        cpu.clear_flag(STATUS_FLAG_MASK_CARRY);
+        cpu.clear_flag(STATUS_FLAG_CARRY);
     }
     return InstructionResult {
         executed_cycles: instruction.cycles,
@@ -988,7 +980,7 @@ fn ror(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
 fn rti(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     cpu.status = cpu.stack_pop() | 0b0010_0000 & 0b1110_1111;
     cpu.program_counter = cpu.stack_pop_u16().wrapping_sub(1);
-    cpu.clear_flag(STATUS_FLAG_MASK_BREAK_COMMAND);
+    cpu.clear_flag(STATUS_FLAG_BREAK_COMMAND);
     return InstructionResult {
         executed_cycles: instruction.cycles,
     };
@@ -1028,22 +1020,22 @@ fn sbc(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     let operand = !cpu.get_operand(&instruction.addressing_mode);
     let register_a_sign = cpu.register_a & 0b1000_0000;
     let operand_sign = operand & 0b1000_0000;
-    let carry = cpu.get_flag_state(STATUS_FLAG_MASK_CARRY) as u8;
+    let carry = cpu.get_flag_state(STATUS_FLAG_CARRY) as u8;
     let (temp_sum, overflow_occured_on_first_addition) = cpu.register_a.overflowing_add(operand);
     let (final_sum, overflow_occured_on_second_addition) = temp_sum.overflowing_add(carry);
     cpu.register_a = final_sum;
     if overflow_occured_on_first_addition || overflow_occured_on_second_addition {
-        cpu.set_flag(STATUS_FLAG_MASK_CARRY);
-        cpu.set_flag(STATUS_FLAG_MASK_OVERFLOW);
+        cpu.set_flag(STATUS_FLAG_CARRY);
+        cpu.set_flag(STATUS_FLAG_OVERFLOW);
     } else {
-        cpu.clear_flag(STATUS_FLAG_MASK_CARRY)
+        cpu.clear_flag(STATUS_FLAG_CARRY)
     };
 
     let result_sign = cpu.register_a & 0b1000_0000;
     if register_a_sign == operand_sign && result_sign != register_a_sign {
-        cpu.set_flag(STATUS_FLAG_MASK_OVERFLOW);
+        cpu.set_flag(STATUS_FLAG_OVERFLOW);
     } else {
-        cpu.clear_flag(STATUS_FLAG_MASK_OVERFLOW);
+        cpu.clear_flag(STATUS_FLAG_OVERFLOW);
     }
 
     cpu.update_negative_flag(cpu.register_a);
@@ -1053,14 +1045,14 @@ fn sbc(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
 }
 
 fn sec(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
-    cpu.set_flag(STATUS_FLAG_MASK_CARRY);
+    cpu.set_flag(STATUS_FLAG_CARRY);
     return InstructionResult {
         executed_cycles: instruction.cycles,
     };
 }
 
 fn sed(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
-    cpu.set_flag(STATUS_FLAG_MASK_DECIMAL);
+    cpu.set_flag(STATUS_FLAG_DECIMAL);
     return InstructionResult {
         executed_cycles: instruction.cycles,
     };
@@ -1083,9 +1075,9 @@ fn slo(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     }
 
     if operand_most_significant_bit == 1 {
-        cpu.set_flag(STATUS_FLAG_MASK_CARRY);
+        cpu.set_flag(STATUS_FLAG_CARRY);
     } else {
-        cpu.clear_flag(STATUS_FLAG_MASK_CARRY);
+        cpu.clear_flag(STATUS_FLAG_CARRY);
     }
 
     cpu.register_a = cpu.register_a | result;

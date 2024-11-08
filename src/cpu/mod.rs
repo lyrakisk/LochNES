@@ -5,13 +5,13 @@ use crate::cpu::instructions::*;
 
 use std::sync::{Arc, Mutex};
 
-const STATUS_FLAG_MASK_NEGATIVE: u8 = 0b10000000;
-const STATUS_FLAG_MASK_OVERFLOW: u8 = 0b01000000;
-const STATUS_FLAG_MASK_BREAK_COMMAND: u8 = 0b0001_0000;
-const STATUS_FLAG_MASK_DECIMAL: u8 = 0b0000_1000;
-const STATUS_FLAG_INTERRUPT_DISABLE: u8 = 0b0000_0100;
-const STATUS_FLAG_MASK_ZERO: u8 = 0b00000010;
-const STATUS_FLAG_MASK_CARRY: u8 = 0b00000001;
+pub const STATUS_FLAG_NEGATIVE: u8 = 0b10000000;
+pub const STATUS_FLAG_OVERFLOW: u8 = 0b01000000;
+pub const STATUS_FLAG_BREAK_COMMAND: u8 = 0b0001_0000;
+pub const STATUS_FLAG_DECIMAL: u8 = 0b0000_1000;
+pub const STATUS_FLAG_INTERRUPT_DISABLE: u8 = 0b0000_0100;
+pub const STATUS_FLAG_ZERO: u8 = 0b00000010;
+pub const STATUS_FLAG_CARRY: u8 = 0b00000001;
 
 #[derive(Debug, PartialEq)]
 enum FlagStates {
@@ -286,17 +286,17 @@ impl CPU {
 
     fn update_zero_flag(&mut self, data: u8) {
         if data == 0 {
-            self.set_flag(STATUS_FLAG_MASK_ZERO);
+            self.set_flag(STATUS_FLAG_ZERO);
         } else {
-            self.clear_flag(STATUS_FLAG_MASK_ZERO);
+            self.clear_flag(STATUS_FLAG_ZERO);
         }
     }
 
     fn update_negative_flag(&mut self, data: u8) {
         if data & 0b1000_0000 != 0 {
-            self.set_flag(STATUS_FLAG_MASK_NEGATIVE);
+            self.set_flag(STATUS_FLAG_NEGATIVE);
         } else {
-            self.clear_flag(STATUS_FLAG_MASK_NEGATIVE);
+            self.clear_flag(STATUS_FLAG_NEGATIVE);
         }
     }
 }
