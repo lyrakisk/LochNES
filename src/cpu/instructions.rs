@@ -1,69 +1,14 @@
+use crate::cpu::addressing_modes::*;
 use crate::cpu::*;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
-
-// todo: Move to different module
-#[derive(Clone, Debug)]
-#[allow(non_camel_case_types)]
-pub enum AddressingMode {
-    Implicit,
-    Accumulator,
-    Relative,
-    Immediate,
-    ZeroPage,
-    ZeroPage_X,
-    ZeroPage_Y,
-    Absolute,
-    Absolute_X,
-    Absolute_Y,
-    Indirect,
-    Indexed_Indirect_X,
-    Indirect_indexed_Y,
-}
-
-impl AddressingMode {
-    pub fn is_page_crossed(&self, cpu: &CPU) -> bool {
-        match self {
-            AddressingMode::Implicit => false,
-            AddressingMode::Accumulator => false,
-            AddressingMode::Relative => false,
-            AddressingMode::Immediate => false,
-            AddressingMode::ZeroPage => false,
-            AddressingMode::ZeroPage_X => false,
-            AddressingMode::ZeroPage_Y => false,
-            AddressingMode::Absolute => false,
-            AddressingMode::Absolute_X => {
-                let low = cpu.bus.lock().unwrap().mem_read(cpu.program_counter);
-                let (_, page_crossed) = low.overflowing_add(cpu.register_x);
-                return page_crossed;
-            }
-            AddressingMode::Absolute_Y => {
-                let low = cpu.bus.lock().unwrap().mem_read(cpu.program_counter);
-                let (_, page_crossed) = low.overflowing_add(cpu.register_y);
-                return page_crossed;
-            }
-            AddressingMode::Indirect => false,
-            AddressingMode::Indexed_Indirect_X => false,
-            AddressingMode::Indirect_indexed_Y => {
-                let indirect_address = cpu.bus.lock().unwrap().mem_read(cpu.program_counter);
-                let (_, page_crossed) = cpu
-                    .bus
-                    .lock()
-                    .unwrap()
-                    .mem_read(indirect_address as u16)
-                    .overflowing_add(cpu.register_y);
-                return page_crossed;
-            }
-        }
-    }
-}
 
 #[derive(Clone)]
 pub struct Instruction {
     pub opcode: u8,
     pub name: &'static str,
     pub bytes: u8,
-    pub addressing_mode: AddressingMode,
+    pub addressing_mode: AddressingModes,
     pub cycles: u8,
 }
 
@@ -143,202 +88,202 @@ impl Instruction {
 #[rustfmt::skip]
 pub static INSTRUCTIONS: Lazy<HashMap<u8, Instruction>> = Lazy::new(|| {
     vec![
-        Instruction {opcode: 0x69, name: "ADC", bytes: 2, addressing_mode: AddressingMode::Immediate, cycles: 2},
-        Instruction {opcode: 0x65, name: "ADC", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 3},
-        Instruction {opcode: 0x75, name: "ADC", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X, cycles: 4},
-        Instruction {opcode: 0x6D, name: "ADC", bytes: 3, addressing_mode: AddressingMode::Absolute, cycles: 4},
-        Instruction {opcode: 0x7D, name: "ADC", bytes: 3, addressing_mode: AddressingMode::Absolute_X, cycles: 4},
-        Instruction {opcode: 0x79, name: "ADC", bytes: 3, addressing_mode: AddressingMode::Absolute_Y, cycles: 4},
-        Instruction {opcode: 0x61, name: "ADC", bytes: 2, addressing_mode: AddressingMode::Indexed_Indirect_X, cycles: 6},
-        Instruction {opcode: 0x71, name: "ADC", bytes: 2, addressing_mode: AddressingMode::Indirect_indexed_Y, cycles: 5},
-        Instruction {opcode: 0x29, name: "AND", bytes: 2, addressing_mode: AddressingMode::Immediate, cycles: 2},
-        Instruction {opcode: 0x25, name: "AND", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 3},
-        Instruction {opcode: 0x35, name: "AND", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X, cycles: 4},
-        Instruction {opcode: 0x2D, name: "AND", bytes: 3, addressing_mode: AddressingMode::Absolute, cycles: 4},
-        Instruction {opcode: 0x3D, name: "AND", bytes: 3, addressing_mode: AddressingMode::Absolute_X, cycles: 4},
-        Instruction {opcode: 0x39, name: "AND", bytes: 3, addressing_mode: AddressingMode::Absolute_Y, cycles: 4},
-        Instruction {opcode: 0x21, name: "AND", bytes: 2, addressing_mode: AddressingMode::Indexed_Indirect_X, cycles: 6},
-        Instruction {opcode: 0x31, name: "AND", bytes: 2, addressing_mode: AddressingMode::Indirect_indexed_Y, cycles: 5},
-        Instruction {opcode: 0x0A, name: "ASL", bytes: 1, addressing_mode: AddressingMode::Accumulator, cycles: 2},
-        Instruction {opcode: 0x06, name: "ASL", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 5},
-        Instruction {opcode: 0x16, name: "ASL", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X, cycles: 6},
-        Instruction {opcode: 0x0E, name: "ASL", bytes: 3, addressing_mode: AddressingMode::Absolute, cycles: 6},
-        Instruction {opcode: 0x1E, name: "ASL", bytes: 3, addressing_mode: AddressingMode::Absolute_X, cycles: 7},
-        Instruction {opcode: 0x90, name: "BCC", bytes: 2, addressing_mode: AddressingMode::Relative, cycles: 2},
-        Instruction {opcode: 0xB0, name: "BCS", bytes: 2, addressing_mode: AddressingMode::Relative, cycles: 2},
-        Instruction {opcode: 0xF0, name: "BEQ", bytes: 2, addressing_mode: AddressingMode::Relative, cycles: 2},
-        Instruction {opcode: 0x24, name: "BIT", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 3},
-        Instruction {opcode: 0x2C, name: "BIT", bytes: 3, addressing_mode: AddressingMode::Absolute, cycles: 4},
-        Instruction {opcode: 0x30, name: "BMI", bytes: 2, addressing_mode: AddressingMode::Relative, cycles: 2},
-        Instruction {opcode: 0xD0, name: "BNE", bytes: 2, addressing_mode: AddressingMode::Relative, cycles: 2},
-        Instruction {opcode: 0x10, name: "BPL", bytes: 2, addressing_mode: AddressingMode::Relative, cycles: 2},
-        Instruction {opcode: 0x00, name: "BRK", bytes: 1, addressing_mode: AddressingMode::Implicit, cycles: 7},
-        Instruction {opcode: 0x50, name: "BVC", bytes: 2, addressing_mode: AddressingMode::Relative, cycles: 2},
-        Instruction {opcode: 0x70, name: "BVS", bytes: 2, addressing_mode: AddressingMode::Relative, cycles: 2},
-        Instruction {opcode: 0x18, name: "CLC", bytes: 1, addressing_mode: AddressingMode::Implicit, cycles: 2},
-        Instruction {opcode: 0xD8, name: "CLD", bytes: 1, addressing_mode: AddressingMode::Implicit, cycles: 2},
-        Instruction {opcode: 0x58, name: "CLI", bytes: 1, addressing_mode: AddressingMode::Implicit, cycles: 2},
-        Instruction {opcode: 0xB8, name: "CLV", bytes: 1, addressing_mode: AddressingMode::Implicit, cycles: 2},
-        Instruction {opcode: 0xC9, name: "CMP", bytes: 2, addressing_mode: AddressingMode::Immediate, cycles: 2},
-        Instruction {opcode: 0xC5, name: "CMP", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 3},
-        Instruction {opcode: 0xD5, name: "CMP", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X, cycles: 4},
-        Instruction {opcode: 0xCD, name: "CMP", bytes: 3, addressing_mode: AddressingMode::Absolute, cycles: 4},
-        Instruction {opcode: 0xDD, name: "CMP", bytes: 3, addressing_mode: AddressingMode::Absolute_X, cycles: 4},
-        Instruction {opcode: 0xD9, name: "CMP", bytes: 3, addressing_mode: AddressingMode::Absolute_Y, cycles: 4},
-        Instruction {opcode: 0xC1, name: "CMP", bytes: 2, addressing_mode: AddressingMode::Indexed_Indirect_X, cycles: 6},
-        Instruction {opcode: 0xD1, name: "CMP", bytes: 2, addressing_mode: AddressingMode::Indirect_indexed_Y, cycles: 5},
-        Instruction {opcode: 0xE0, name: "CPX", bytes: 2, addressing_mode: AddressingMode::Immediate, cycles: 2},
-        Instruction {opcode: 0xE4, name: "CPX", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 3},
-        Instruction {opcode: 0xEC, name: "CPX", bytes: 3, addressing_mode: AddressingMode::Absolute, cycles: 4},
-        Instruction {opcode: 0xC0, name: "CPY", bytes: 2, addressing_mode: AddressingMode::Immediate, cycles: 2},
-        Instruction {opcode: 0xC4, name: "CPY", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 3},
-        Instruction {opcode: 0xCC, name: "CPY", bytes: 3, addressing_mode: AddressingMode::Absolute, cycles: 4},
-        Instruction {opcode: 0xC6, name: "DEC", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 5},
-        Instruction {opcode: 0xD6, name: "DEC", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X, cycles: 6},
-        Instruction {opcode: 0xCE, name: "DEC", bytes: 3, addressing_mode: AddressingMode::Absolute, cycles: 6},
-        Instruction {opcode: 0xDE, name: "DEC", bytes: 3, addressing_mode: AddressingMode::Absolute_X, cycles: 7},
-        Instruction {opcode: 0xCA, name: "DEX", bytes: 1, addressing_mode: AddressingMode::Implicit, cycles: 2},
-        Instruction {opcode: 0x88, name: "DEY", bytes: 1, addressing_mode: AddressingMode::Implicit, cycles: 2},
-        Instruction {opcode: 0x49, name: "EOR", bytes: 2, addressing_mode: AddressingMode::Immediate, cycles: 2},
-        Instruction {opcode: 0x45, name: "EOR", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 3},
-        Instruction {opcode: 0x55, name: "EOR", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X, cycles: 4},
-        Instruction {opcode: 0x4D, name: "EOR", bytes: 3, addressing_mode: AddressingMode::Absolute, cycles: 4},
-        Instruction {opcode: 0x5D, name: "EOR", bytes: 3, addressing_mode: AddressingMode::Absolute_X, cycles: 4},
-        Instruction {opcode: 0x59, name: "EOR", bytes: 3, addressing_mode: AddressingMode::Absolute_Y, cycles: 4},
-        Instruction {opcode: 0x41, name: "EOR", bytes: 2, addressing_mode: AddressingMode::Indexed_Indirect_X, cycles: 6},
-        Instruction {opcode: 0x51, name: "EOR", bytes: 2, addressing_mode: AddressingMode::Indirect_indexed_Y, cycles: 5},
-        Instruction {opcode: 0xE6, name: "INC", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 5},
-        Instruction {opcode: 0xF6, name: "INC", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X, cycles: 6},
-        Instruction {opcode: 0xEE, name: "INC", bytes: 3, addressing_mode: AddressingMode::Absolute, cycles: 6},
-        Instruction {opcode: 0xFE, name: "INC", bytes: 3, addressing_mode: AddressingMode::Absolute_X, cycles: 7},
-        Instruction {opcode: 0xE8, name: "INX", bytes: 1, addressing_mode: AddressingMode::Implicit, cycles: 2},
-        Instruction {opcode: 0xC8, name: "INY", bytes: 1, addressing_mode: AddressingMode::Implicit, cycles: 2},
-        Instruction {opcode: 0x4C, name: "JMP", bytes: 3, addressing_mode: AddressingMode::Absolute, cycles: 3},
-        Instruction {opcode: 0x6C, name: "JMP", bytes: 5, addressing_mode: AddressingMode::Indirect, cycles: 5},
-        Instruction {opcode: 0x20, name: "JSR", bytes: 3, addressing_mode: AddressingMode::Absolute, cycles: 6},
-        Instruction {opcode: 0xA9, name: "LDA", bytes: 2, addressing_mode: AddressingMode::Immediate, cycles: 2},
-        Instruction {opcode: 0xA5, name: "LDA", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 3},
-        Instruction {opcode: 0xB5, name: "LDA", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X, cycles: 4},
-        Instruction {opcode: 0xAD, name: "LDA", bytes: 3, addressing_mode: AddressingMode::Absolute, cycles: 4},
-        Instruction {opcode: 0xBD, name: "LDA", bytes: 3, addressing_mode: AddressingMode::Absolute_X, cycles: 4},
-        Instruction {opcode: 0xB9, name: "LDA", bytes: 3, addressing_mode: AddressingMode::Absolute_Y, cycles: 4},
-        Instruction {opcode: 0xA1, name: "LDA", bytes: 2, addressing_mode: AddressingMode::Indexed_Indirect_X, cycles: 6},
-        Instruction {opcode: 0xB1, name: "LDA", bytes: 2, addressing_mode: AddressingMode::Indirect_indexed_Y, cycles: 5},
-        Instruction {opcode: 0xA2, name: "LDX", bytes: 2, addressing_mode: AddressingMode::Immediate, cycles: 2},
-        Instruction {opcode: 0xA6, name: "LDX", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 3},
-        Instruction {opcode: 0xB6, name: "LDX", bytes: 2, addressing_mode: AddressingMode::ZeroPage_Y, cycles: 4},
-        Instruction {opcode: 0xAE, name: "LDX", bytes: 3, addressing_mode: AddressingMode::Absolute, cycles: 4},
-        Instruction {opcode: 0xBE, name: "LDX", bytes: 3, addressing_mode: AddressingMode::Absolute_Y, cycles: 4},
-        Instruction {opcode: 0xA0, name: "LDY", bytes: 2, addressing_mode: AddressingMode::Immediate, cycles: 2},
-        Instruction {opcode: 0xA4, name: "LDY", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 3},
-        Instruction {opcode: 0xB4, name: "LDY", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X, cycles: 4},
-        Instruction {opcode: 0xAC, name: "LDY", bytes: 3, addressing_mode: AddressingMode::Absolute, cycles: 4},
-        Instruction {opcode: 0xBC, name: "LDY", bytes: 3, addressing_mode: AddressingMode::Absolute_X, cycles: 4},
-        Instruction {opcode: 0x4A, name: "LSR", bytes: 1, addressing_mode: AddressingMode::Accumulator, cycles: 2},
-        Instruction {opcode: 0x46, name: "LSR", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 5},
-        Instruction {opcode: 0x56, name: "LSR", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X, cycles: 6},
-        Instruction {opcode: 0x4E, name: "LSR", bytes: 3, addressing_mode: AddressingMode::Absolute, cycles: 6},
-        Instruction {opcode: 0x5E, name: "LSR", bytes: 3, addressing_mode: AddressingMode::Absolute_X, cycles: 7},
-        Instruction {opcode: 0x1A, name: "NOP", bytes: 1, addressing_mode: AddressingMode::Implicit, cycles: 2},
-        Instruction {opcode: 0x3A, name: "NOP", bytes: 1, addressing_mode: AddressingMode::Implicit, cycles: 2},
-        Instruction {opcode: 0x5A, name: "NOP", bytes: 1, addressing_mode: AddressingMode::Implicit, cycles: 2},
-        Instruction {opcode: 0x7A, name: "NOP", bytes: 1, addressing_mode: AddressingMode::Implicit, cycles: 2},
-        Instruction {opcode: 0xDA, name: "NOP", bytes: 1, addressing_mode: AddressingMode::Implicit, cycles: 2},
-        Instruction {opcode: 0xEA, name: "NOP", bytes: 1, addressing_mode: AddressingMode::Implicit, cycles: 2},
-        Instruction {opcode: 0xFA, name: "NOP", bytes: 1, addressing_mode: AddressingMode::Implicit, cycles: 2},
-        Instruction {opcode: 0x09, name: "ORA", bytes: 2, addressing_mode: AddressingMode::Immediate, cycles: 2},
-        Instruction {opcode: 0x05, name: "ORA", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 3},
-        Instruction {opcode: 0x15, name: "ORA", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X, cycles: 4},
-        Instruction {opcode: 0x0D, name: "ORA", bytes: 3, addressing_mode: AddressingMode::Absolute, cycles: 4},
-        Instruction {opcode: 0x1D, name: "ORA", bytes: 3, addressing_mode: AddressingMode::Absolute_X, cycles: 4},
-        Instruction {opcode: 0x19, name: "ORA", bytes: 3, addressing_mode: AddressingMode::Absolute_Y, cycles: 4},
-        Instruction {opcode: 0x01, name: "ORA", bytes: 2, addressing_mode: AddressingMode::Indexed_Indirect_X, cycles: 6},
-        Instruction {opcode: 0x11, name: "ORA", bytes: 2, addressing_mode: AddressingMode::Indirect_indexed_Y, cycles: 5},
-        Instruction {opcode: 0x48, name: "PHA", bytes: 1, addressing_mode: AddressingMode::Implicit, cycles: 3},
-        Instruction {opcode: 0x08, name: "PHP", bytes: 1, addressing_mode: AddressingMode::Implicit, cycles: 3},
-        Instruction {opcode: 0x68, name: "PLA", bytes: 1, addressing_mode: AddressingMode::Implicit, cycles: 4},
-        Instruction {opcode: 0x28, name: "PLP", bytes: 1, addressing_mode: AddressingMode::Implicit, cycles: 4},
-        Instruction {opcode: 0x2A, name: "ROL", bytes: 1, addressing_mode: AddressingMode::Accumulator, cycles: 2},
-        Instruction {opcode: 0x26, name: "ROL", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 5},
-        Instruction {opcode: 0x36, name: "ROL", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X, cycles: 6},
-        Instruction {opcode: 0x2E, name: "ROL", bytes: 3, addressing_mode: AddressingMode::Absolute, cycles: 6},
-        Instruction {opcode: 0x3E, name: "ROL", bytes: 3, addressing_mode: AddressingMode::Absolute_X, cycles: 7},
-        Instruction {opcode: 0x6A, name: "ROR", bytes: 1, addressing_mode: AddressingMode::Accumulator, cycles: 2},
-        Instruction {opcode: 0x66, name: "ROR", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 5},
-        Instruction {opcode: 0x76, name: "ROR", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X, cycles: 6},
-        Instruction {opcode: 0x6E, name: "ROR", bytes: 3, addressing_mode: AddressingMode::Absolute, cycles: 6},
-        Instruction {opcode: 0x7E, name: "ROR", bytes: 3, addressing_mode: AddressingMode::Absolute_X, cycles: 7},
-        Instruction {opcode: 0x40, name: "RTI", bytes: 1, addressing_mode: AddressingMode::Implicit, cycles: 6},
-        Instruction {opcode: 0x60, name: "RTS", bytes: 1, addressing_mode: AddressingMode::Implicit, cycles: 6},
-        Instruction {opcode: 0xE9, name: "SBC", bytes: 2, addressing_mode: AddressingMode::Immediate, cycles: 2},
-        Instruction {opcode: 0xE5, name: "SBC", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 3},
-        Instruction {opcode: 0xF5, name: "SBC", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X, cycles: 4},
-        Instruction {opcode: 0xED, name: "SBC", bytes: 3, addressing_mode: AddressingMode::Absolute, cycles: 4},
-        Instruction {opcode: 0xFD, name: "SBC", bytes: 3, addressing_mode: AddressingMode::Absolute_X, cycles: 4},
-        Instruction {opcode: 0xF9, name: "SBC", bytes: 3, addressing_mode: AddressingMode::Absolute_Y, cycles: 4},
-        Instruction {opcode: 0xE1, name: "SBC", bytes: 2, addressing_mode: AddressingMode::Indexed_Indirect_X, cycles: 6},
-        Instruction {opcode: 0xF1, name: "SBC", bytes: 2, addressing_mode: AddressingMode::Indirect_indexed_Y, cycles: 5},
-        Instruction {opcode: 0x38, name: "SEC", bytes: 1, addressing_mode: AddressingMode::Implicit, cycles: 2},
-        Instruction {opcode: 0xF8, name: "SED", bytes: 1, addressing_mode: AddressingMode::Implicit, cycles: 2},
-        Instruction {opcode: 0x78, name: "SEI", bytes: 1, addressing_mode: AddressingMode::Implicit, cycles: 2},
-        Instruction {opcode: 0x85, name: "STA", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 3},
-        Instruction {opcode: 0x95, name: "STA", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X, cycles: 4},
-        Instruction {opcode: 0x8D, name: "STA", bytes: 3, addressing_mode: AddressingMode::Absolute, cycles: 4},
-        Instruction {opcode: 0x9D, name: "STA", bytes: 3, addressing_mode: AddressingMode::Absolute_X, cycles: 5},
-        Instruction {opcode: 0x99, name: "STA", bytes: 3, addressing_mode: AddressingMode::Absolute_Y, cycles: 5},
-        Instruction {opcode: 0x81, name: "STA", bytes: 2, addressing_mode: AddressingMode::Indexed_Indirect_X, cycles: 6},
-        Instruction {opcode: 0x91, name: "STA", bytes: 2, addressing_mode: AddressingMode::Indirect_indexed_Y, cycles: 6},
-        Instruction {opcode: 0x86, name: "STX", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 3},
-        Instruction {opcode: 0x96, name: "STX", bytes: 2, addressing_mode: AddressingMode::ZeroPage_Y, cycles: 4},
-        Instruction {opcode: 0x8E, name: "STX", bytes: 3, addressing_mode: AddressingMode::Absolute, cycles: 4},
-        Instruction {opcode: 0x84, name: "STY", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 3},
-        Instruction {opcode: 0x94, name: "STY", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X, cycles: 4},
-        Instruction {opcode: 0x8C, name: "STY", bytes: 3, addressing_mode: AddressingMode::Absolute, cycles: 4},
-        Instruction {opcode: 0xAA, name: "TAX", bytes: 1, addressing_mode: AddressingMode::Implicit, cycles: 2},
-        Instruction {opcode: 0xA8, name: "TAY", bytes: 1, addressing_mode: AddressingMode::Implicit, cycles: 2},
-        Instruction {opcode: 0xBA, name: "TSX", bytes: 1, addressing_mode: AddressingMode::Implicit, cycles: 2},
-        Instruction {opcode: 0x8A, name: "TXA", bytes: 1, addressing_mode: AddressingMode::Implicit, cycles: 2},
-        Instruction {opcode: 0x9A, name: "TXS", bytes: 1, addressing_mode: AddressingMode::Implicit, cycles: 2},
-        Instruction {opcode: 0x98, name: "TYA", bytes: 1, addressing_mode: AddressingMode::Implicit, cycles: 2},
+        Instruction {opcode: 0x69, name: "ADC", bytes: 2, addressing_mode: AddressingModes::Immediate, cycles: 2},
+        Instruction {opcode: 0x65, name: "ADC", bytes: 2, addressing_mode: AddressingModes::ZeroPage, cycles: 3},
+        Instruction {opcode: 0x75, name: "ADC", bytes: 2, addressing_mode: AddressingModes::ZeroPageX, cycles: 4},
+        Instruction {opcode: 0x6D, name: "ADC", bytes: 3, addressing_mode: AddressingModes::Absolute, cycles: 4},
+        Instruction {opcode: 0x7D, name: "ADC", bytes: 3, addressing_mode: AddressingModes::AbsoluteX, cycles: 4},
+        Instruction {opcode: 0x79, name: "ADC", bytes: 3, addressing_mode: AddressingModes::AbsoluteY, cycles: 4},
+        Instruction {opcode: 0x61, name: "ADC", bytes: 2, addressing_mode: AddressingModes::IndexedIndirectX, cycles: 6},
+        Instruction {opcode: 0x71, name: "ADC", bytes: 2, addressing_mode: AddressingModes::IndirectIndexedY, cycles: 5},
+        Instruction {opcode: 0x29, name: "AND", bytes: 2, addressing_mode: AddressingModes::Immediate, cycles: 2},
+        Instruction {opcode: 0x25, name: "AND", bytes: 2, addressing_mode: AddressingModes::ZeroPage, cycles: 3},
+        Instruction {opcode: 0x35, name: "AND", bytes: 2, addressing_mode: AddressingModes::ZeroPageX, cycles: 4},
+        Instruction {opcode: 0x2D, name: "AND", bytes: 3, addressing_mode: AddressingModes::Absolute, cycles: 4},
+        Instruction {opcode: 0x3D, name: "AND", bytes: 3, addressing_mode: AddressingModes::AbsoluteX, cycles: 4},
+        Instruction {opcode: 0x39, name: "AND", bytes: 3, addressing_mode: AddressingModes::AbsoluteY, cycles: 4},
+        Instruction {opcode: 0x21, name: "AND", bytes: 2, addressing_mode: AddressingModes::IndexedIndirectX, cycles: 6},
+        Instruction {opcode: 0x31, name: "AND", bytes: 2, addressing_mode: AddressingModes::IndirectIndexedY, cycles: 5},
+        Instruction {opcode: 0x0A, name: "ASL", bytes: 1, addressing_mode: AddressingModes::Accumulator, cycles: 2},
+        Instruction {opcode: 0x06, name: "ASL", bytes: 2, addressing_mode: AddressingModes::ZeroPage, cycles: 5},
+        Instruction {opcode: 0x16, name: "ASL", bytes: 2, addressing_mode: AddressingModes::ZeroPageX, cycles: 6},
+        Instruction {opcode: 0x0E, name: "ASL", bytes: 3, addressing_mode: AddressingModes::Absolute, cycles: 6},
+        Instruction {opcode: 0x1E, name: "ASL", bytes: 3, addressing_mode: AddressingModes::AbsoluteX, cycles: 7},
+        Instruction {opcode: 0x90, name: "BCC", bytes: 2, addressing_mode: AddressingModes::Relative, cycles: 2},
+        Instruction {opcode: 0xB0, name: "BCS", bytes: 2, addressing_mode: AddressingModes::Relative, cycles: 2},
+        Instruction {opcode: 0xF0, name: "BEQ", bytes: 2, addressing_mode: AddressingModes::Relative, cycles: 2},
+        Instruction {opcode: 0x24, name: "BIT", bytes: 2, addressing_mode: AddressingModes::ZeroPage, cycles: 3},
+        Instruction {opcode: 0x2C, name: "BIT", bytes: 3, addressing_mode: AddressingModes::Absolute, cycles: 4},
+        Instruction {opcode: 0x30, name: "BMI", bytes: 2, addressing_mode: AddressingModes::Relative, cycles: 2},
+        Instruction {opcode: 0xD0, name: "BNE", bytes: 2, addressing_mode: AddressingModes::Relative, cycles: 2},
+        Instruction {opcode: 0x10, name: "BPL", bytes: 2, addressing_mode: AddressingModes::Relative, cycles: 2},
+        Instruction {opcode: 0x00, name: "BRK", bytes: 1, addressing_mode: AddressingModes::Implicit, cycles: 7},
+        Instruction {opcode: 0x50, name: "BVC", bytes: 2, addressing_mode: AddressingModes::Relative, cycles: 2},
+        Instruction {opcode: 0x70, name: "BVS", bytes: 2, addressing_mode: AddressingModes::Relative, cycles: 2},
+        Instruction {opcode: 0x18, name: "CLC", bytes: 1, addressing_mode: AddressingModes::Implicit, cycles: 2},
+        Instruction {opcode: 0xD8, name: "CLD", bytes: 1, addressing_mode: AddressingModes::Implicit, cycles: 2},
+        Instruction {opcode: 0x58, name: "CLI", bytes: 1, addressing_mode: AddressingModes::Implicit, cycles: 2},
+        Instruction {opcode: 0xB8, name: "CLV", bytes: 1, addressing_mode: AddressingModes::Implicit, cycles: 2},
+        Instruction {opcode: 0xC9, name: "CMP", bytes: 2, addressing_mode: AddressingModes::Immediate, cycles: 2},
+        Instruction {opcode: 0xC5, name: "CMP", bytes: 2, addressing_mode: AddressingModes::ZeroPage, cycles: 3},
+        Instruction {opcode: 0xD5, name: "CMP", bytes: 2, addressing_mode: AddressingModes::ZeroPageX, cycles: 4},
+        Instruction {opcode: 0xCD, name: "CMP", bytes: 3, addressing_mode: AddressingModes::Absolute, cycles: 4},
+        Instruction {opcode: 0xDD, name: "CMP", bytes: 3, addressing_mode: AddressingModes::AbsoluteX, cycles: 4},
+        Instruction {opcode: 0xD9, name: "CMP", bytes: 3, addressing_mode: AddressingModes::AbsoluteY, cycles: 4},
+        Instruction {opcode: 0xC1, name: "CMP", bytes: 2, addressing_mode: AddressingModes::IndexedIndirectX, cycles: 6},
+        Instruction {opcode: 0xD1, name: "CMP", bytes: 2, addressing_mode: AddressingModes::IndirectIndexedY, cycles: 5},
+        Instruction {opcode: 0xE0, name: "CPX", bytes: 2, addressing_mode: AddressingModes::Immediate, cycles: 2},
+        Instruction {opcode: 0xE4, name: "CPX", bytes: 2, addressing_mode: AddressingModes::ZeroPage, cycles: 3},
+        Instruction {opcode: 0xEC, name: "CPX", bytes: 3, addressing_mode: AddressingModes::Absolute, cycles: 4},
+        Instruction {opcode: 0xC0, name: "CPY", bytes: 2, addressing_mode: AddressingModes::Immediate, cycles: 2},
+        Instruction {opcode: 0xC4, name: "CPY", bytes: 2, addressing_mode: AddressingModes::ZeroPage, cycles: 3},
+        Instruction {opcode: 0xCC, name: "CPY", bytes: 3, addressing_mode: AddressingModes::Absolute, cycles: 4},
+        Instruction {opcode: 0xC6, name: "DEC", bytes: 2, addressing_mode: AddressingModes::ZeroPage, cycles: 5},
+        Instruction {opcode: 0xD6, name: "DEC", bytes: 2, addressing_mode: AddressingModes::ZeroPageX, cycles: 6},
+        Instruction {opcode: 0xCE, name: "DEC", bytes: 3, addressing_mode: AddressingModes::Absolute, cycles: 6},
+        Instruction {opcode: 0xDE, name: "DEC", bytes: 3, addressing_mode: AddressingModes::AbsoluteX, cycles: 7},
+        Instruction {opcode: 0xCA, name: "DEX", bytes: 1, addressing_mode: AddressingModes::Implicit, cycles: 2},
+        Instruction {opcode: 0x88, name: "DEY", bytes: 1, addressing_mode: AddressingModes::Implicit, cycles: 2},
+        Instruction {opcode: 0x49, name: "EOR", bytes: 2, addressing_mode: AddressingModes::Immediate, cycles: 2},
+        Instruction {opcode: 0x45, name: "EOR", bytes: 2, addressing_mode: AddressingModes::ZeroPage, cycles: 3},
+        Instruction {opcode: 0x55, name: "EOR", bytes: 2, addressing_mode: AddressingModes::ZeroPageX, cycles: 4},
+        Instruction {opcode: 0x4D, name: "EOR", bytes: 3, addressing_mode: AddressingModes::Absolute, cycles: 4},
+        Instruction {opcode: 0x5D, name: "EOR", bytes: 3, addressing_mode: AddressingModes::AbsoluteX, cycles: 4},
+        Instruction {opcode: 0x59, name: "EOR", bytes: 3, addressing_mode: AddressingModes::AbsoluteY, cycles: 4},
+        Instruction {opcode: 0x41, name: "EOR", bytes: 2, addressing_mode: AddressingModes::IndexedIndirectX, cycles: 6},
+        Instruction {opcode: 0x51, name: "EOR", bytes: 2, addressing_mode: AddressingModes::IndirectIndexedY, cycles: 5},
+        Instruction {opcode: 0xE6, name: "INC", bytes: 2, addressing_mode: AddressingModes::ZeroPage, cycles: 5},
+        Instruction {opcode: 0xF6, name: "INC", bytes: 2, addressing_mode: AddressingModes::ZeroPageX, cycles: 6},
+        Instruction {opcode: 0xEE, name: "INC", bytes: 3, addressing_mode: AddressingModes::Absolute, cycles: 6},
+        Instruction {opcode: 0xFE, name: "INC", bytes: 3, addressing_mode: AddressingModes::AbsoluteX, cycles: 7},
+        Instruction {opcode: 0xE8, name: "INX", bytes: 1, addressing_mode: AddressingModes::Implicit, cycles: 2},
+        Instruction {opcode: 0xC8, name: "INY", bytes: 1, addressing_mode: AddressingModes::Implicit, cycles: 2},
+        Instruction {opcode: 0x4C, name: "JMP", bytes: 3, addressing_mode: AddressingModes::Absolute, cycles: 3},
+        Instruction {opcode: 0x6C, name: "JMP", bytes: 5, addressing_mode: AddressingModes::Indirect, cycles: 5},
+        Instruction {opcode: 0x20, name: "JSR", bytes: 3, addressing_mode: AddressingModes::Absolute, cycles: 6},
+        Instruction {opcode: 0xA9, name: "LDA", bytes: 2, addressing_mode: AddressingModes::Immediate, cycles: 2},
+        Instruction {opcode: 0xA5, name: "LDA", bytes: 2, addressing_mode: AddressingModes::ZeroPage, cycles: 3},
+        Instruction {opcode: 0xB5, name: "LDA", bytes: 2, addressing_mode: AddressingModes::ZeroPageX, cycles: 4},
+        Instruction {opcode: 0xAD, name: "LDA", bytes: 3, addressing_mode: AddressingModes::Absolute, cycles: 4},
+        Instruction {opcode: 0xBD, name: "LDA", bytes: 3, addressing_mode: AddressingModes::AbsoluteX, cycles: 4},
+        Instruction {opcode: 0xB9, name: "LDA", bytes: 3, addressing_mode: AddressingModes::AbsoluteY, cycles: 4},
+        Instruction {opcode: 0xA1, name: "LDA", bytes: 2, addressing_mode: AddressingModes::IndexedIndirectX, cycles: 6},
+        Instruction {opcode: 0xB1, name: "LDA", bytes: 2, addressing_mode: AddressingModes::IndirectIndexedY, cycles: 5},
+        Instruction {opcode: 0xA2, name: "LDX", bytes: 2, addressing_mode: AddressingModes::Immediate, cycles: 2},
+        Instruction {opcode: 0xA6, name: "LDX", bytes: 2, addressing_mode: AddressingModes::ZeroPage, cycles: 3},
+        Instruction {opcode: 0xB6, name: "LDX", bytes: 2, addressing_mode: AddressingModes::ZeroPageY, cycles: 4},
+        Instruction {opcode: 0xAE, name: "LDX", bytes: 3, addressing_mode: AddressingModes::Absolute, cycles: 4},
+        Instruction {opcode: 0xBE, name: "LDX", bytes: 3, addressing_mode: AddressingModes::AbsoluteY, cycles: 4},
+        Instruction {opcode: 0xA0, name: "LDY", bytes: 2, addressing_mode: AddressingModes::Immediate, cycles: 2},
+        Instruction {opcode: 0xA4, name: "LDY", bytes: 2, addressing_mode: AddressingModes::ZeroPage, cycles: 3},
+        Instruction {opcode: 0xB4, name: "LDY", bytes: 2, addressing_mode: AddressingModes::ZeroPageX, cycles: 4},
+        Instruction {opcode: 0xAC, name: "LDY", bytes: 3, addressing_mode: AddressingModes::Absolute, cycles: 4},
+        Instruction {opcode: 0xBC, name: "LDY", bytes: 3, addressing_mode: AddressingModes::AbsoluteX, cycles: 4},
+        Instruction {opcode: 0x4A, name: "LSR", bytes: 1, addressing_mode: AddressingModes::Accumulator, cycles: 2},
+        Instruction {opcode: 0x46, name: "LSR", bytes: 2, addressing_mode: AddressingModes::ZeroPage, cycles: 5},
+        Instruction {opcode: 0x56, name: "LSR", bytes: 2, addressing_mode: AddressingModes::ZeroPageX, cycles: 6},
+        Instruction {opcode: 0x4E, name: "LSR", bytes: 3, addressing_mode: AddressingModes::Absolute, cycles: 6},
+        Instruction {opcode: 0x5E, name: "LSR", bytes: 3, addressing_mode: AddressingModes::AbsoluteX, cycles: 7},
+        Instruction {opcode: 0x1A, name: "NOP", bytes: 1, addressing_mode: AddressingModes::Implicit, cycles: 2},
+        Instruction {opcode: 0x3A, name: "NOP", bytes: 1, addressing_mode: AddressingModes::Implicit, cycles: 2},
+        Instruction {opcode: 0x5A, name: "NOP", bytes: 1, addressing_mode: AddressingModes::Implicit, cycles: 2},
+        Instruction {opcode: 0x7A, name: "NOP", bytes: 1, addressing_mode: AddressingModes::Implicit, cycles: 2},
+        Instruction {opcode: 0xDA, name: "NOP", bytes: 1, addressing_mode: AddressingModes::Implicit, cycles: 2},
+        Instruction {opcode: 0xEA, name: "NOP", bytes: 1, addressing_mode: AddressingModes::Implicit, cycles: 2},
+        Instruction {opcode: 0xFA, name: "NOP", bytes: 1, addressing_mode: AddressingModes::Implicit, cycles: 2},
+        Instruction {opcode: 0x09, name: "ORA", bytes: 2, addressing_mode: AddressingModes::Immediate, cycles: 2},
+        Instruction {opcode: 0x05, name: "ORA", bytes: 2, addressing_mode: AddressingModes::ZeroPage, cycles: 3},
+        Instruction {opcode: 0x15, name: "ORA", bytes: 2, addressing_mode: AddressingModes::ZeroPageX, cycles: 4},
+        Instruction {opcode: 0x0D, name: "ORA", bytes: 3, addressing_mode: AddressingModes::Absolute, cycles: 4},
+        Instruction {opcode: 0x1D, name: "ORA", bytes: 3, addressing_mode: AddressingModes::AbsoluteX, cycles: 4},
+        Instruction {opcode: 0x19, name: "ORA", bytes: 3, addressing_mode: AddressingModes::AbsoluteY, cycles: 4},
+        Instruction {opcode: 0x01, name: "ORA", bytes: 2, addressing_mode: AddressingModes::IndexedIndirectX, cycles: 6},
+        Instruction {opcode: 0x11, name: "ORA", bytes: 2, addressing_mode: AddressingModes::IndirectIndexedY, cycles: 5},
+        Instruction {opcode: 0x48, name: "PHA", bytes: 1, addressing_mode: AddressingModes::Implicit, cycles: 3},
+        Instruction {opcode: 0x08, name: "PHP", bytes: 1, addressing_mode: AddressingModes::Implicit, cycles: 3},
+        Instruction {opcode: 0x68, name: "PLA", bytes: 1, addressing_mode: AddressingModes::Implicit, cycles: 4},
+        Instruction {opcode: 0x28, name: "PLP", bytes: 1, addressing_mode: AddressingModes::Implicit, cycles: 4},
+        Instruction {opcode: 0x2A, name: "ROL", bytes: 1, addressing_mode: AddressingModes::Accumulator, cycles: 2},
+        Instruction {opcode: 0x26, name: "ROL", bytes: 2, addressing_mode: AddressingModes::ZeroPage, cycles: 5},
+        Instruction {opcode: 0x36, name: "ROL", bytes: 2, addressing_mode: AddressingModes::ZeroPageX, cycles: 6},
+        Instruction {opcode: 0x2E, name: "ROL", bytes: 3, addressing_mode: AddressingModes::Absolute, cycles: 6},
+        Instruction {opcode: 0x3E, name: "ROL", bytes: 3, addressing_mode: AddressingModes::AbsoluteX, cycles: 7},
+        Instruction {opcode: 0x6A, name: "ROR", bytes: 1, addressing_mode: AddressingModes::Accumulator, cycles: 2},
+        Instruction {opcode: 0x66, name: "ROR", bytes: 2, addressing_mode: AddressingModes::ZeroPage, cycles: 5},
+        Instruction {opcode: 0x76, name: "ROR", bytes: 2, addressing_mode: AddressingModes::ZeroPageX, cycles: 6},
+        Instruction {opcode: 0x6E, name: "ROR", bytes: 3, addressing_mode: AddressingModes::Absolute, cycles: 6},
+        Instruction {opcode: 0x7E, name: "ROR", bytes: 3, addressing_mode: AddressingModes::AbsoluteX, cycles: 7},
+        Instruction {opcode: 0x40, name: "RTI", bytes: 1, addressing_mode: AddressingModes::Implicit, cycles: 6},
+        Instruction {opcode: 0x60, name: "RTS", bytes: 1, addressing_mode: AddressingModes::Implicit, cycles: 6},
+        Instruction {opcode: 0xE9, name: "SBC", bytes: 2, addressing_mode: AddressingModes::Immediate, cycles: 2},
+        Instruction {opcode: 0xE5, name: "SBC", bytes: 2, addressing_mode: AddressingModes::ZeroPage, cycles: 3},
+        Instruction {opcode: 0xF5, name: "SBC", bytes: 2, addressing_mode: AddressingModes::ZeroPageX, cycles: 4},
+        Instruction {opcode: 0xED, name: "SBC", bytes: 3, addressing_mode: AddressingModes::Absolute, cycles: 4},
+        Instruction {opcode: 0xFD, name: "SBC", bytes: 3, addressing_mode: AddressingModes::AbsoluteX, cycles: 4},
+        Instruction {opcode: 0xF9, name: "SBC", bytes: 3, addressing_mode: AddressingModes::AbsoluteY, cycles: 4},
+        Instruction {opcode: 0xE1, name: "SBC", bytes: 2, addressing_mode: AddressingModes::IndexedIndirectX, cycles: 6},
+        Instruction {opcode: 0xF1, name: "SBC", bytes: 2, addressing_mode: AddressingModes::IndirectIndexedY, cycles: 5},
+        Instruction {opcode: 0x38, name: "SEC", bytes: 1, addressing_mode: AddressingModes::Implicit, cycles: 2},
+        Instruction {opcode: 0xF8, name: "SED", bytes: 1, addressing_mode: AddressingModes::Implicit, cycles: 2},
+        Instruction {opcode: 0x78, name: "SEI", bytes: 1, addressing_mode: AddressingModes::Implicit, cycles: 2},
+        Instruction {opcode: 0x85, name: "STA", bytes: 2, addressing_mode: AddressingModes::ZeroPage, cycles: 3},
+        Instruction {opcode: 0x95, name: "STA", bytes: 2, addressing_mode: AddressingModes::ZeroPageX, cycles: 4},
+        Instruction {opcode: 0x8D, name: "STA", bytes: 3, addressing_mode: AddressingModes::Absolute, cycles: 4},
+        Instruction {opcode: 0x9D, name: "STA", bytes: 3, addressing_mode: AddressingModes::AbsoluteX, cycles: 5},
+        Instruction {opcode: 0x99, name: "STA", bytes: 3, addressing_mode: AddressingModes::AbsoluteY, cycles: 5},
+        Instruction {opcode: 0x81, name: "STA", bytes: 2, addressing_mode: AddressingModes::IndexedIndirectX, cycles: 6},
+        Instruction {opcode: 0x91, name: "STA", bytes: 2, addressing_mode: AddressingModes::IndirectIndexedY, cycles: 6},
+        Instruction {opcode: 0x86, name: "STX", bytes: 2, addressing_mode: AddressingModes::ZeroPage, cycles: 3},
+        Instruction {opcode: 0x96, name: "STX", bytes: 2, addressing_mode: AddressingModes::ZeroPageY, cycles: 4},
+        Instruction {opcode: 0x8E, name: "STX", bytes: 3, addressing_mode: AddressingModes::Absolute, cycles: 4},
+        Instruction {opcode: 0x84, name: "STY", bytes: 2, addressing_mode: AddressingModes::ZeroPage, cycles: 3},
+        Instruction {opcode: 0x94, name: "STY", bytes: 2, addressing_mode: AddressingModes::ZeroPageX, cycles: 4},
+        Instruction {opcode: 0x8C, name: "STY", bytes: 3, addressing_mode: AddressingModes::Absolute, cycles: 4},
+        Instruction {opcode: 0xAA, name: "TAX", bytes: 1, addressing_mode: AddressingModes::Implicit, cycles: 2},
+        Instruction {opcode: 0xA8, name: "TAY", bytes: 1, addressing_mode: AddressingModes::Implicit, cycles: 2},
+        Instruction {opcode: 0xBA, name: "TSX", bytes: 1, addressing_mode: AddressingModes::Implicit, cycles: 2},
+        Instruction {opcode: 0x8A, name: "TXA", bytes: 1, addressing_mode: AddressingModes::Implicit, cycles: 2},
+        Instruction {opcode: 0x9A, name: "TXS", bytes: 1, addressing_mode: AddressingModes::Implicit, cycles: 2},
+        Instruction {opcode: 0x98, name: "TYA", bytes: 1, addressing_mode: AddressingModes::Implicit, cycles: 2},
 
         // Illegal Opcodes
-        Instruction {opcode: 0x0b, name: "AAC", bytes: 2, addressing_mode: AddressingMode::Immediate, cycles: 2},
-        Instruction {opcode: 0x2b, name: "AAC", bytes: 2, addressing_mode: AddressingMode::Immediate, cycles: 2},
-        Instruction {opcode: 0x04, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 3},
-        Instruction {opcode: 0x14, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X, cycles: 4},
-        Instruction {opcode: 0x34, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X, cycles: 4},
-        Instruction {opcode: 0x44, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 3},
-        Instruction {opcode: 0x54, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X, cycles: 4},
-        Instruction {opcode: 0x64, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 3},
-        Instruction {opcode: 0x74, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X, cycles: 4},
-        Instruction {opcode: 0x80, name: "DOP", bytes: 2, addressing_mode: AddressingMode::Immediate, cycles: 2},
-        Instruction {opcode: 0x82, name: "DOP", bytes: 2, addressing_mode: AddressingMode::Immediate, cycles: 2},
-        Instruction {opcode: 0x89, name: "DOP", bytes: 2, addressing_mode: AddressingMode::Immediate, cycles: 2},
-        Instruction {opcode: 0xC2, name: "DOP", bytes: 2, addressing_mode: AddressingMode::Immediate, cycles: 2},
-        Instruction {opcode: 0xD4, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X, cycles: 4},
-        Instruction {opcode: 0xE2, name: "DOP", bytes: 2, addressing_mode: AddressingMode::Immediate, cycles: 2},
-        Instruction {opcode: 0xF4, name: "DOP", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X, cycles: 4},
-        Instruction {opcode: 0x27, name: "RLA", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 5},
-        Instruction {opcode: 0x37, name: "RLA", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X, cycles: 6},
-        Instruction {opcode: 0x2F, name: "RLA", bytes: 3, addressing_mode: AddressingMode::Absolute, cycles: 6},
-        Instruction {opcode: 0x3F, name: "RLA", bytes: 3, addressing_mode: AddressingMode::Absolute_X, cycles: 7},
-        Instruction {opcode: 0x3B, name: "RLA", bytes: 3, addressing_mode: AddressingMode::Absolute_Y, cycles: 7},
-        Instruction {opcode: 0x23, name: "RLA", bytes: 2, addressing_mode: AddressingMode::Indexed_Indirect_X, cycles: 8},
-        Instruction {opcode: 0x33, name: "RLA", bytes: 2, addressing_mode: AddressingMode::Indirect_indexed_Y, cycles: 8},
-        Instruction {opcode: 0x07, name: "SLO", bytes: 2, addressing_mode: AddressingMode::ZeroPage, cycles: 5},
-        Instruction {opcode: 0x17, name: "SLO", bytes: 2, addressing_mode: AddressingMode::ZeroPage_X, cycles: 6},
-        Instruction {opcode: 0x0F, name: "SLO", bytes: 3, addressing_mode: AddressingMode::Absolute, cycles: 6},
-        Instruction {opcode: 0x1F, name: "SLO", bytes: 3, addressing_mode: AddressingMode::Absolute_X, cycles: 7},
-        Instruction {opcode: 0x1B, name: "SLO", bytes: 3, addressing_mode: AddressingMode::Absolute_Y, cycles: 7},
-        Instruction {opcode: 0x03, name: "SLO", bytes: 2, addressing_mode: AddressingMode::Indexed_Indirect_X, cycles: 8},
-        Instruction {opcode: 0x13, name: "SLO", bytes: 2, addressing_mode: AddressingMode::Indirect_indexed_Y, cycles: 8},
-        Instruction {opcode: 0x0C, name: "TOP", bytes: 3, addressing_mode: AddressingMode::Absolute, cycles: 4},
-        Instruction {opcode: 0x1C, name: "TOP", bytes: 3, addressing_mode: AddressingMode::Absolute_X, cycles: 4},
-        Instruction {opcode: 0x3C, name: "TOP", bytes: 3, addressing_mode: AddressingMode::Absolute_X, cycles: 4},
-        Instruction {opcode: 0x5C, name: "TOP", bytes: 3, addressing_mode: AddressingMode::Absolute_X, cycles: 4},
-        Instruction {opcode: 0x7C, name: "TOP", bytes: 3, addressing_mode: AddressingMode::Absolute_X, cycles: 4},
-        Instruction {opcode: 0xDC, name: "TOP", bytes: 3, addressing_mode: AddressingMode::Absolute_X, cycles: 4},
-        Instruction {opcode: 0xFC, name: "TOP", bytes: 3, addressing_mode: AddressingMode::Absolute_X, cycles: 4},
+        Instruction {opcode: 0x0b, name: "AAC", bytes: 2, addressing_mode: AddressingModes::Immediate, cycles: 2},
+        Instruction {opcode: 0x2b, name: "AAC", bytes: 2, addressing_mode: AddressingModes::Immediate, cycles: 2},
+        Instruction {opcode: 0x04, name: "DOP", bytes: 2, addressing_mode: AddressingModes::ZeroPage, cycles: 3},
+        Instruction {opcode: 0x14, name: "DOP", bytes: 2, addressing_mode: AddressingModes::ZeroPageX, cycles: 4},
+        Instruction {opcode: 0x34, name: "DOP", bytes: 2, addressing_mode: AddressingModes::ZeroPageX, cycles: 4},
+        Instruction {opcode: 0x44, name: "DOP", bytes: 2, addressing_mode: AddressingModes::ZeroPage, cycles: 3},
+        Instruction {opcode: 0x54, name: "DOP", bytes: 2, addressing_mode: AddressingModes::ZeroPageX, cycles: 4},
+        Instruction {opcode: 0x64, name: "DOP", bytes: 2, addressing_mode: AddressingModes::ZeroPage, cycles: 3},
+        Instruction {opcode: 0x74, name: "DOP", bytes: 2, addressing_mode: AddressingModes::ZeroPageX, cycles: 4},
+        Instruction {opcode: 0x80, name: "DOP", bytes: 2, addressing_mode: AddressingModes::Immediate, cycles: 2},
+        Instruction {opcode: 0x82, name: "DOP", bytes: 2, addressing_mode: AddressingModes::Immediate, cycles: 2},
+        Instruction {opcode: 0x89, name: "DOP", bytes: 2, addressing_mode: AddressingModes::Immediate, cycles: 2},
+        Instruction {opcode: 0xC2, name: "DOP", bytes: 2, addressing_mode: AddressingModes::Immediate, cycles: 2},
+        Instruction {opcode: 0xD4, name: "DOP", bytes: 2, addressing_mode: AddressingModes::ZeroPageX, cycles: 4},
+        Instruction {opcode: 0xE2, name: "DOP", bytes: 2, addressing_mode: AddressingModes::Immediate, cycles: 2},
+        Instruction {opcode: 0xF4, name: "DOP", bytes: 2, addressing_mode: AddressingModes::ZeroPageX, cycles: 4},
+        Instruction {opcode: 0x27, name: "RLA", bytes: 2, addressing_mode: AddressingModes::ZeroPage, cycles: 5},
+        Instruction {opcode: 0x37, name: "RLA", bytes: 2, addressing_mode: AddressingModes::ZeroPageX, cycles: 6},
+        Instruction {opcode: 0x2F, name: "RLA", bytes: 3, addressing_mode: AddressingModes::Absolute, cycles: 6},
+        Instruction {opcode: 0x3F, name: "RLA", bytes: 3, addressing_mode: AddressingModes::AbsoluteX, cycles: 7},
+        Instruction {opcode: 0x3B, name: "RLA", bytes: 3, addressing_mode: AddressingModes::AbsoluteY, cycles: 7},
+        Instruction {opcode: 0x23, name: "RLA", bytes: 2, addressing_mode: AddressingModes::IndexedIndirectX, cycles: 8},
+        Instruction {opcode: 0x33, name: "RLA", bytes: 2, addressing_mode: AddressingModes::IndirectIndexedY, cycles: 8},
+        Instruction {opcode: 0x07, name: "SLO", bytes: 2, addressing_mode: AddressingModes::ZeroPage, cycles: 5},
+        Instruction {opcode: 0x17, name: "SLO", bytes: 2, addressing_mode: AddressingModes::ZeroPageX, cycles: 6},
+        Instruction {opcode: 0x0F, name: "SLO", bytes: 3, addressing_mode: AddressingModes::Absolute, cycles: 6},
+        Instruction {opcode: 0x1F, name: "SLO", bytes: 3, addressing_mode: AddressingModes::AbsoluteX, cycles: 7},
+        Instruction {opcode: 0x1B, name: "SLO", bytes: 3, addressing_mode: AddressingModes::AbsoluteY, cycles: 7},
+        Instruction {opcode: 0x03, name: "SLO", bytes: 2, addressing_mode: AddressingModes::IndexedIndirectX, cycles: 8},
+        Instruction {opcode: 0x13, name: "SLO", bytes: 2, addressing_mode: AddressingModes::IndirectIndexedY, cycles: 8},
+        Instruction {opcode: 0x0C, name: "TOP", bytes: 3, addressing_mode: AddressingModes::Absolute, cycles: 4},
+        Instruction {opcode: 0x1C, name: "TOP", bytes: 3, addressing_mode: AddressingModes::AbsoluteX, cycles: 4},
+        Instruction {opcode: 0x3C, name: "TOP", bytes: 3, addressing_mode: AddressingModes::AbsoluteX, cycles: 4},
+        Instruction {opcode: 0x5C, name: "TOP", bytes: 3, addressing_mode: AddressingModes::AbsoluteX, cycles: 4},
+        Instruction {opcode: 0x7C, name: "TOP", bytes: 3, addressing_mode: AddressingModes::AbsoluteX, cycles: 4},
+        Instruction {opcode: 0xDC, name: "TOP", bytes: 3, addressing_mode: AddressingModes::AbsoluteX, cycles: 4},
+        Instruction {opcode: 0xFC, name: "TOP", bytes: 3, addressing_mode: AddressingModes::AbsoluteX, cycles: 4},
         ]
     .into_iter()
     .map(|instruction| (instruction.opcode, instruction))
@@ -346,7 +291,7 @@ pub static INSTRUCTIONS: Lazy<HashMap<u8, Instruction>> = Lazy::new(|| {
 });
 
 fn aac(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
-    let operand = cpu.get_operand(&instruction.addressing_mode);
+    let operand = instruction.addressing_mode.get_operand(&cpu);
     cpu.register_a = cpu.register_a & operand;
     cpu.update_zero_flag(cpu.register_a);
     cpu.update_negative_flag(cpu.register_a);
@@ -366,7 +311,7 @@ fn adc(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     let mut instruction_result = InstructionResult {
         executed_cycles: instruction.cycles,
     };
-    let operand = cpu.get_operand(&instruction.addressing_mode);
+    let operand = instruction.addressing_mode.get_operand(&cpu);
     let register_a_sign = cpu.register_a & 0b1000_0000;
     let operand_sign = operand & 0b1000_0000;
     let carry = cpu.get_flag_state(STATUS_FLAG_CARRY);
@@ -397,7 +342,7 @@ fn and(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     let mut instruction_result = InstructionResult {
         executed_cycles: instruction.cycles,
     };
-    let operand = cpu.get_operand(&instruction.addressing_mode);
+    let operand = instruction.addressing_mode.get_operand(&cpu);
     cpu.register_a = cpu.register_a & operand;
     cpu.update_zero_flag(cpu.register_a);
     cpu.update_negative_flag(cpu.register_a);
@@ -410,16 +355,16 @@ fn asl(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     let instruction_result = InstructionResult {
         executed_cycles: instruction.cycles,
     };
-    let operand = cpu.get_operand(&instruction.addressing_mode);
+    let operand = instruction.addressing_mode.get_operand(&cpu);
     let operand_most_significant_bit = (operand & 0b1000_0000) >> 7;
     let result = operand << 1;
 
     match instruction.addressing_mode {
-        AddressingMode::Accumulator => {
+        AddressingModes::Accumulator => {
             cpu.register_a = result;
         }
         _ => {
-            let operand_address = cpu.get_operand_address(&instruction.addressing_mode);
+            let operand_address = instruction.addressing_mode.get_operand_address(&cpu);
             cpu.bus.lock().unwrap().mem_write(operand_address, result);
         }
     }
@@ -487,7 +432,7 @@ fn bit(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     let instruction_result = InstructionResult {
         executed_cycles: instruction.cycles,
     };
-    let operand = cpu.get_operand(&instruction.addressing_mode);
+    let operand = instruction.addressing_mode.get_operand(&cpu);
     let result = cpu.register_a & operand;
 
     cpu.update_zero_flag(result);
@@ -625,7 +570,7 @@ fn cmp(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     };
     let (result, overflow_occured) = cpu
         .register_a
-        .overflowing_sub(cpu.get_operand(&instruction.addressing_mode));
+        .overflowing_sub(instruction.addressing_mode.get_operand(&cpu));
 
     if overflow_occured {
         cpu.clear_flag(STATUS_FLAG_CARRY);
@@ -643,7 +588,7 @@ fn cpx(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     // todo: remove code duplication, almost similar to cmp, cpy
     let (result, overflow_occured) = cpu
         .register_x
-        .overflowing_sub(cpu.get_operand(&instruction.addressing_mode));
+        .overflowing_sub(instruction.addressing_mode.get_operand(&cpu));
 
     if overflow_occured {
         cpu.clear_flag(STATUS_FLAG_CARRY);
@@ -662,7 +607,7 @@ fn cpy(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     // todo: remove code duplication, almost similar to cmp, cpx
     let (result, overflow_occured) = cpu
         .register_y
-        .overflowing_sub(cpu.get_operand(&instruction.addressing_mode));
+        .overflowing_sub(instruction.addressing_mode.get_operand(&cpu));
 
     if overflow_occured {
         cpu.clear_flag(STATUS_FLAG_CARRY);
@@ -678,7 +623,7 @@ fn cpy(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
 }
 
 fn dec(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
-    let address = cpu.get_operand_address(&instruction.addressing_mode);
+    let address = instruction.addressing_mode.get_operand_address(&cpu);
     let result = cpu.bus.lock().unwrap().mem_read(address).wrapping_sub(1);
     cpu.bus.lock().unwrap().mem_write(address, result);
     cpu.update_zero_flag(result);
@@ -715,7 +660,7 @@ fn eor(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     let mut instruction_result = InstructionResult {
         executed_cycles: instruction.cycles,
     };
-    let operand = cpu.get_operand(&instruction.addressing_mode);
+    let operand = instruction.addressing_mode.get_operand(&cpu);
     cpu.register_a = cpu.register_a ^ operand;
     cpu.update_zero_flag(cpu.register_a);
     cpu.update_negative_flag(cpu.register_a);
@@ -728,7 +673,7 @@ fn lda(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
         executed_cycles: instruction.cycles,
     };
     // todo: remove duplicate code, same as ldx() and ldy()
-    let operand = cpu.get_operand(&instruction.addressing_mode);
+    let operand = instruction.addressing_mode.get_operand(&cpu);
     cpu.register_a = operand;
     cpu.update_zero_flag(cpu.register_a);
     cpu.update_negative_flag(cpu.register_a);
@@ -740,7 +685,7 @@ fn ldx(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     let mut instruction_result = InstructionResult {
         executed_cycles: instruction.cycles,
     };
-    let operand = cpu.get_operand(&instruction.addressing_mode);
+    let operand = instruction.addressing_mode.get_operand(&cpu);
     cpu.register_x = operand;
     cpu.update_zero_flag(cpu.register_x);
     cpu.update_negative_flag(cpu.register_x);
@@ -752,7 +697,7 @@ fn ldy(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     let mut instruction_result = InstructionResult {
         executed_cycles: instruction.cycles,
     };
-    let operand = cpu.get_operand(&instruction.addressing_mode);
+    let operand = instruction.addressing_mode.get_operand(&cpu);
     cpu.register_y = operand;
     cpu.update_zero_flag(cpu.register_y);
     cpu.update_negative_flag(cpu.register_y);
@@ -761,16 +706,16 @@ fn ldy(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
 }
 
 fn lsr(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
-    let operand = cpu.get_operand(&instruction.addressing_mode);
+    let operand = instruction.addressing_mode.get_operand(&cpu);
     let operand_least_significant_bit = operand & 0b0000_0001;
     let result = operand >> 1;
 
     match instruction.addressing_mode {
-        AddressingMode::Accumulator => {
+        AddressingModes::Accumulator => {
             cpu.register_a = result;
         }
         _ => {
-            let address = cpu.get_operand_address(&instruction.addressing_mode);
+            let address = instruction.addressing_mode.get_operand_address(&cpu);
             cpu.bus.lock().unwrap().mem_write(address, result);
         }
     }
@@ -792,7 +737,7 @@ fn ora(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     let mut instruction_result = InstructionResult {
         executed_cycles: instruction.cycles,
     };
-    let operand = cpu.get_operand(&instruction.addressing_mode);
+    let operand = instruction.addressing_mode.get_operand(&cpu);
     cpu.register_a = cpu.register_a | operand;
     cpu.update_zero_flag(cpu.register_a);
     cpu.update_negative_flag(cpu.register_a);
@@ -835,7 +780,7 @@ fn pla(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
 }
 
 fn inc(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
-    let address = cpu.get_operand_address(&instruction.addressing_mode);
+    let address = instruction.addressing_mode.get_operand_address(&cpu);
     let result = cpu.bus.lock().unwrap().mem_read(address).wrapping_add(1);
     cpu.bus.lock().unwrap().mem_write(address, result);
     cpu.update_zero_flag(result);
@@ -867,7 +812,7 @@ fn rla(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     // Executes a rol followed by and
     let carry = cpu.get_flag_state(STATUS_FLAG_CARRY);
 
-    let operand = cpu.get_operand(&instruction.addressing_mode);
+    let operand = instruction.addressing_mode.get_operand(&cpu);
     let operand_most_significant_bit = (operand & 0b1000_0000) >> 7;
     let mut result = operand << 1;
 
@@ -880,7 +825,7 @@ fn rla(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
         }
     }
 
-    let address = cpu.get_operand_address(&instruction.addressing_mode);
+    let address = instruction.addressing_mode.get_operand_address(&cpu);
     cpu.bus.lock().unwrap().mem_write(address, result);
 
     cpu.register_a = cpu.register_a & result;
@@ -902,7 +847,7 @@ fn rla(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
 fn rol(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     let carry = cpu.get_flag_state(STATUS_FLAG_CARRY);
 
-    let operand = cpu.get_operand(&instruction.addressing_mode);
+    let operand = instruction.addressing_mode.get_operand(&cpu);
     let operand_most_significant_bit = (operand & 0b1000_0000) >> 7;
     let mut result = operand << 1;
 
@@ -916,11 +861,11 @@ fn rol(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     }
 
     match instruction.addressing_mode {
-        AddressingMode::Accumulator => {
+        AddressingModes::Accumulator => {
             cpu.register_a = result;
         }
         _ => {
-            let address = cpu.get_operand_address(&instruction.addressing_mode);
+            let address = instruction.addressing_mode.get_operand_address(&cpu);
             cpu.bus.lock().unwrap().mem_write(address, result);
         }
     }
@@ -941,7 +886,7 @@ fn rol(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
 fn ror(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     let carry = cpu.get_flag_state(STATUS_FLAG_CARRY);
 
-    let operand = cpu.get_operand(&instruction.addressing_mode);
+    let operand = instruction.addressing_mode.get_operand(&cpu);
     let operand_least_significant_bit = operand & 0b0000_0001;
     let mut result = operand >> 1;
 
@@ -955,11 +900,11 @@ fn ror(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     }
 
     match instruction.addressing_mode {
-        AddressingMode::Accumulator => {
+        AddressingModes::Accumulator => {
             cpu.register_a = result;
         }
         _ => {
-            let address = cpu.get_operand_address(&instruction.addressing_mode);
+            let address = instruction.addressing_mode.get_operand_address(&cpu);
             cpu.bus.lock().unwrap().mem_write(address, result);
         }
     }
@@ -998,7 +943,7 @@ fn nop(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     };
 }
 fn jmp(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
-    cpu.program_counter = cpu.get_operand_address(&instruction.addressing_mode);
+    cpu.program_counter = instruction.addressing_mode.get_operand_address(&cpu);
     return InstructionResult {
         executed_cycles: instruction.cycles,
     };
@@ -1007,7 +952,7 @@ fn jmp(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
 fn jsr(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     // Program counter is incremented instead of decremented as requested in the nesdev reference
     cpu.stack_push_u16(cpu.program_counter.wrapping_add(1));
-    cpu.program_counter = cpu.get_operand_address(&instruction.addressing_mode);
+    cpu.program_counter = instruction.addressing_mode.get_operand_address(&cpu);
     return InstructionResult {
         executed_cycles: instruction.cycles,
     };
@@ -1017,7 +962,7 @@ fn sbc(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     let mut instruction_result = InstructionResult {
         executed_cycles: instruction.cycles,
     };
-    let operand = !cpu.get_operand(&instruction.addressing_mode);
+    let operand = !instruction.addressing_mode.get_operand(&cpu);
     let register_a_sign = cpu.register_a & 0b1000_0000;
     let operand_sign = operand & 0b1000_0000;
     let carry = cpu.get_flag_state(STATUS_FLAG_CARRY) as u8;
@@ -1060,16 +1005,16 @@ fn sed(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
 
 fn slo(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     // executes an asl followed by ora
-    let operand = cpu.get_operand(&instruction.addressing_mode);
+    let operand = instruction.addressing_mode.get_operand(&cpu);
     let operand_most_significant_bit = (operand & 0b1000_0000) >> 7;
     let result = operand << 1;
 
     match instruction.addressing_mode {
-        AddressingMode::Accumulator => {
+        AddressingModes::Accumulator => {
             cpu.register_a = result;
         }
         _ => {
-            let operand_address = cpu.get_operand_address(&instruction.addressing_mode);
+            let operand_address = instruction.addressing_mode.get_operand_address(&cpu);
             cpu.bus.lock().unwrap().mem_write(operand_address, result);
         }
     }
@@ -1095,7 +1040,7 @@ fn sei(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     };
 }
 fn sta(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
-    let address = cpu.get_operand_address(&instruction.addressing_mode);
+    let address = instruction.addressing_mode.get_operand_address(&cpu);
     cpu.bus.lock().unwrap().mem_write(address, cpu.register_a);
     return InstructionResult {
         executed_cycles: instruction.cycles,
@@ -1103,14 +1048,14 @@ fn sta(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
 }
 
 fn stx(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
-    let address = cpu.get_operand_address(&instruction.addressing_mode);
+    let address = instruction.addressing_mode.get_operand_address(&cpu);
     cpu.bus.lock().unwrap().mem_write(address, cpu.register_x);
     return InstructionResult {
         executed_cycles: instruction.cycles,
     };
 }
 fn sty(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
-    let address = cpu.get_operand_address(&instruction.addressing_mode);
+    let address = instruction.addressing_mode.get_operand_address(&cpu);
     cpu.bus.lock().unwrap().mem_write(address, cpu.register_y);
     return InstructionResult {
         executed_cycles: instruction.cycles,
