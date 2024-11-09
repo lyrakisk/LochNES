@@ -1,8 +1,8 @@
 #[derive(Debug, Clone, PartialEq)]
 pub enum Mirroring {
-    VERTICAL,
-    HORIZONTAL,
-    FOUR_SCREEN,
+    Vertical,
+    Horizontal,
+    FourScreen,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -49,9 +49,9 @@ impl TryFrom<&Vec<u8>> for Rom {
         let is_mirroring_vertical = raw[6] & 0b1 != 0;
 
         let mirroring = match (is_mirroring_four_screen, is_mirroring_vertical) {
-            (true, _) => Mirroring::FOUR_SCREEN,
-            (false, true) => Mirroring::VERTICAL,
-            (false, false) => Mirroring::HORIZONTAL,
+            (true, _) => Mirroring::FourScreen,
+            (false, true) => Mirroring::Vertical,
+            (false, false) => Mirroring::Horizontal,
         };
 
         println!("Dump file size: {}", raw.len());
