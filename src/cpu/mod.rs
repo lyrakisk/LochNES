@@ -181,7 +181,7 @@ impl CPU {
 
     // todo: separate the check for page crossing
     fn branch_off_program_counter(&mut self, distance: u8) -> bool {
-        let mut page_crossed = false;
+        let page_crossed: bool;
         let le_bytes = self.program_counter.to_le_bytes();
         // low is incremented here, because we're at the second
         // cycle of the instruction which has incremented the PC

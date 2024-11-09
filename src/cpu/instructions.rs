@@ -937,7 +937,7 @@ fn rts(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     };
 }
 
-fn nop(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
+fn nop(instruction: &Instruction, _cpu: &mut CPU) -> InstructionResult {
     return InstructionResult {
         executed_cycles: instruction.cycles,
     };
