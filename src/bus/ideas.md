@@ -1,1 +1,0 @@
-Create a data structure that defines memory mapping for each device that uses the bus. That way, the same bus can be passed to different devices with different access patterns, so that each device can read/write specific parts of the memory.
