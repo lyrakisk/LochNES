@@ -3,23 +3,32 @@ use std::sync::{Arc, Mutex};
 use crate::bus::Bus;
 
 // registers
-const PPUCTRL: u16 = 0x2000;
-const PPUMASK: u16 = 0x2001;
-const PPUSTATUS: u16 = 0x2002;
-const OAMADDR: u16 = 0x2003;
-const OAMDATA: u16 = 0x2004;
-const PPUSCROLL: u16 = 0x2005;
-const PPUADDR: u16 = 0x2006;
-const PPUDATA: u16 = 0x2007;
 
 pub struct PPU {
     bus: Arc<Mutex<Bus>>,
+    ppuctrl: u16,
+    ppumask: u16,
+    ppustatus: u16,
+    oamaddr: u16,
+    oamdata: u16,
+    ppuscroll: u16,
+    ppuaddr: u16,
+    ppudata: u16,
 }
 
 impl PPU {
     pub fn new(bus: Arc<Mutex<Bus>>) -> Self {
-        bus.lock().unwrap().mem_write(PPUSTATUS, 0b1010_0000);
-        PPU { bus: bus }
+        PPU {
+            bus: bus,
+            ppuctrl: 0b0000_0000,
+            ppumask: 0b0000_0000,
+            ppustatus: 0b1010_0000,
+            oamaddr: 0b0000_0000,
+            oamdata: 0b0000_0000,
+            ppuscroll: 0b0000_0000,
+            ppuaddr: 0b0000_0000,
+            ppudata: 0b0000_0000,
+        }
     }
     pub fn load() {
         todo!()
@@ -48,12 +57,12 @@ mod test_ppu {
         let bus = Arc::new(Mutex::new(Bus::new()));
         let ppu = PPU::new(bus.clone());
 
-        assert_eq!(0b0000_0000, ppu.bus.lock().unwrap().mem_read(PPUCTRL));
-        assert_eq!(0b0000_0000, ppu.bus.lock().unwrap().mem_read(PPUMASK));
-        assert_eq!(0b1010_0000, ppu.bus.lock().unwrap().mem_read(PPUSTATUS));
-        assert_eq!(0b0000_0000, ppu.bus.lock().unwrap().mem_read(PPUSCROLL));
-        assert_eq!(0b0000_0000, ppu.bus.lock().unwrap().mem_read(PPUADDR));
-        assert_eq!(0b0000_0000, ppu.bus.lock().unwrap().mem_read(PPUDATA));
+        assert_eq!(0b0000_0000, ppu.ppuctrl);
+        assert_eq!(0b0000_0000, ppu.ppumask);
+        assert_eq!(0b1010_0000, ppu.ppustatus);
+        assert_eq!(0b0000_0000, ppu.ppuscroll);
+        assert_eq!(0b0000_0000, ppu.ppuaddr);
+        assert_eq!(0b0000_0000, ppu.ppudata);
     }
 
     // todo: test reset
