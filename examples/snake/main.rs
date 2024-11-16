@@ -1,5 +1,5 @@
 use rand::Rng;
-use LochNES::cpu::mappers::test_mapper::TestMapper;
+use LochNES::cpu::mappers::basic_mapper::*;
 use LochNES::cpu::*;
 use LochNES::memory::Memory;
 use LochNES::rom::*;
@@ -37,11 +37,10 @@ fn main() {
 
     let rom_bytes = read(PathBuf::from("examples/snake/snake.nes")).unwrap();
     let rom = Rom::try_from(&rom_bytes).unwrap();
-    let cpu_mapper = Rc::new(RefCell::new(TestMapper::new()));
+    let cpu_mapper = Rc::new(RefCell::new(BasicMapper::new(rom.clone())));
     let mut cpu = CPU::new(cpu_mapper.clone());
 
     println!("rom len: {}", rom.prg_rom.len());
-    cpu.load(rom.prg_rom);
     cpu.reset();
 
     loop {
@@ -59,7 +58,7 @@ fn main() {
         cpu.execute_next_instruction();
     }
 }
-fn handle_user_input(mapper: Rc<RefCell<TestMapper>>, event_pump: &mut EventPump) {
+fn handle_user_input(mapper: Rc<RefCell<BasicMapper>>, event_pump: &mut EventPump) {
     for event in event_pump.poll_iter() {
         match event {
             Event::Quit { .. }
@@ -110,7 +109,7 @@ fn color(byte: u8) -> Color {
     }
 }
 
-fn read_screen_state(mapper: Rc<RefCell<TestMapper>>, frame: &mut [u8; 32 * 3 * 32]) -> bool {
+fn read_screen_state(mapper: Rc<RefCell<BasicMapper>>, frame: &mut [u8; 32 * 3 * 32]) -> bool {
     let mut frame_idx = 0;
     let mut update = false;
     for i in 0x0200..0x600 {
