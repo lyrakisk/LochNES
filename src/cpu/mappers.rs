@@ -1,17 +1,17 @@
 use crate::memory::*;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct BasicMapper {
+pub struct TestMapper {
     memory: [u8; 65536],
 }
 
-impl BasicMapper {
+impl TestMapper {
     pub fn new() -> Self {
-        BasicMapper { memory: [0; 65536] }
+        TestMapper { memory: [0; 65536] }
     }
 }
 
-impl Memory for BasicMapper {
+impl Memory for TestMapper {
     fn read_u8(&self, address: u16) -> u8 {
         return self.memory[address as usize];
     }
@@ -52,21 +52,21 @@ mod test_mapper {
 
     #[test]
     fn test_mem_read() {
-        let mut mapper = BasicMapper::new();
+        let mut mapper = TestMapper::new();
         mapper.memory[0x00AA] = 12;
         assert_eq!(mapper.read_u8(0x00AA), 12);
     }
 
     #[test]
     fn test_mem_write() {
-        let mut mapper = BasicMapper::new();
+        let mut mapper = TestMapper::new();
         mapper.write_u8(0x00AA, 12);
         assert_eq!(mapper.memory[0x00AA], 12);
     }
 
     #[test]
     fn test_mem_write_u16() {
-        let mut mapper = BasicMapper::new();
+        let mut mapper = TestMapper::new();
         mapper.write_u16(0x00AA, 0x8000);
         assert_eq!(mapper.memory[0x00AA], 0x00);
         assert_eq!(mapper.memory[0x00AB], 0x80);
@@ -74,7 +74,7 @@ mod test_mapper {
 
     #[test]
     fn test_mem_read_u16() {
-        let mut mapper = BasicMapper::new();
+        let mut mapper = TestMapper::new();
         mapper.memory[0x00AA] = 0x00;
         mapper.memory[0x00AB] = 0x80;
         assert_eq!(mapper.read_u16(0x00AA), 0x8000);

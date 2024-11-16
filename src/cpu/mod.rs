@@ -214,13 +214,13 @@ impl CPU {
 #[cfg(test)]
 mod test_cpu {
     use super::*;
-    use crate::cpu::mappers::BasicMapper;
+    use crate::cpu::mappers::TestMapper;
     use json::JsonValue;
     use test_case::test_case;
 
     #[test]
     fn test_load() {
-        let mapper = Rc::new(RefCell::new((BasicMapper::new())));
+        let mapper = Rc::new(RefCell::new((TestMapper::new())));
         let mut cpu = CPU::new(mapper);
         cpu.program_counter = 0x8000;
         let program = vec![0xAA, 0x35, 0xFF, 0x00];
@@ -234,7 +234,7 @@ mod test_cpu {
     #[test_case(0b0, 0b0000_0010)]
     #[test_case(0b10, 0b0)]
     fn test_update_zero_flag(register: u8, expected: u8) {
-        let mapper = Rc::new(RefCell::new(BasicMapper::new()));
+        let mapper = Rc::new(RefCell::new(TestMapper::new()));
         let mut cpu = CPU::new(mapper);
         cpu.update_zero_flag(register);
         assert_eq!(cpu.status, expected);
@@ -491,8 +491,8 @@ mod test_cpu {
         assert_eq!(mapper, final_mapper, "Memories don't match!",);
     }
 
-    fn parse_json_value(json_value: &JsonValue) -> (CPU, Rc<RefCell<BasicMapper>>) {
-        let mapper = Rc::new(RefCell::new(BasicMapper::new()));
+    fn parse_json_value(json_value: &JsonValue) -> (CPU, Rc<RefCell<TestMapper>>) {
+        let mapper = Rc::new(RefCell::new(TestMapper::new()));
         for ram_tuple in json_value["ram"].members() {
             mapper.borrow_mut().write_u8(
                 ram_tuple[0].as_u16().unwrap(),

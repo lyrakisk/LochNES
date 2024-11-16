@@ -133,10 +133,10 @@ impl AddressingModes {
 #[cfg(test)]
 mod test_addressing_modes {
     use super::*;
-    use crate::cpu::mappers::BasicMapper;
+    use crate::cpu::mappers::TestMapper;
     #[test]
     fn test_addressing_mode_immediate() {
-        let mapper = Rc::new(RefCell::new(BasicMapper::new()));
+        let mapper = Rc::new(RefCell::new(TestMapper::new()));
         let mut cpu = CPU::new(mapper);
         cpu.program_counter = 0x8000;
         let result = AddressingModes::Immediate.get_operand_address(&cpu);
@@ -145,7 +145,7 @@ mod test_addressing_modes {
 
     #[test]
     fn test_addressing_mode_zero_page() {
-        let mapper = Rc::new(RefCell::new(BasicMapper::new()));
+        let mapper = Rc::new(RefCell::new(TestMapper::new()));
         let mut cpu = CPU::new(mapper);
         cpu.program_counter = 0xAAAA;
         cpu.mapper.borrow_mut().write_u8(0xAAAA, 0xAA);
@@ -155,7 +155,7 @@ mod test_addressing_modes {
 
     #[test]
     fn test_addressing_mode_zero_page_x() {
-        let mapper = Rc::new(RefCell::new(BasicMapper::new()));
+        let mapper = Rc::new(RefCell::new(TestMapper::new()));
         let mut cpu = CPU::new(mapper);
         cpu.program_counter = 0xAAAA;
         cpu.mapper.borrow_mut().write_u8(0xAAAA, 0x80);
@@ -166,7 +166,7 @@ mod test_addressing_modes {
 
     #[test]
     fn test_addressing_mode_zero_page_y() {
-        let mapper = Rc::new(RefCell::new(BasicMapper::new()));
+        let mapper = Rc::new(RefCell::new(TestMapper::new()));
         let mut cpu = CPU::new(mapper);
         cpu.program_counter = 0xAAAA;
         cpu.mapper.borrow_mut().write_u8(0xAAAA, 0x80);
@@ -177,7 +177,7 @@ mod test_addressing_modes {
 
     #[test]
     fn test_addressing_mode_absolute() {
-        let mapper = Rc::new(RefCell::new(BasicMapper::new()));
+        let mapper = Rc::new(RefCell::new(TestMapper::new()));
         let mut cpu = CPU::new(mapper);
         cpu.program_counter = 0x0;
         cpu.mapper.borrow_mut().write_u8(0x0, 0x9e);
@@ -188,7 +188,7 @@ mod test_addressing_modes {
 
     #[test]
     fn test_addressing_mode_absolute_x() {
-        let mapper = Rc::new(RefCell::new(BasicMapper::new()));
+        let mapper = Rc::new(RefCell::new(TestMapper::new()));
         let mut cpu = CPU::new(mapper);
         cpu.program_counter = 0x0;
         cpu.mapper.borrow_mut().write_u16(0x00, 2000);
@@ -199,7 +199,7 @@ mod test_addressing_modes {
 
     #[test]
     fn test_addressing_mode_absolute_y() {
-        let mapper = Rc::new(RefCell::new(BasicMapper::new()));
+        let mapper = Rc::new(RefCell::new(TestMapper::new()));
         let mut cpu = CPU::new(mapper);
         cpu.program_counter = 0x0;
         cpu.mapper.borrow_mut().write_u16(0x00, 2000);
@@ -210,7 +210,7 @@ mod test_addressing_modes {
 
     #[test]
     fn test_addressing_mode_indexed_indirect_x() {
-        let mapper = Rc::new(RefCell::new(BasicMapper::new()));
+        let mapper = Rc::new(RefCell::new(TestMapper::new()));
         let mut cpu = CPU::new(mapper);
         cpu.program_counter = 0x8000;
         cpu.mapper.borrow_mut().write_u8(0x8000, 0x20);
@@ -222,7 +222,7 @@ mod test_addressing_modes {
 
     #[test]
     fn test_addressing_mode_indirect_indexed_y() {
-        let mapper = Rc::new(RefCell::new(BasicMapper::new()));
+        let mapper = Rc::new(RefCell::new(TestMapper::new()));
         let mut cpu = CPU::new(mapper);
         cpu.program_counter = 0x8000;
         cpu.mapper.borrow_mut().write_u8(0x8000, 0x52);
@@ -235,7 +235,7 @@ mod test_addressing_modes {
 
     #[test]
     fn test_get_operand() {
-        let mapper = Rc::new(RefCell::new(BasicMapper::new()));
+        let mapper = Rc::new(RefCell::new(TestMapper::new()));
         let mut cpu = CPU::new(mapper);
         cpu.register_a = 0x80;
         let result = AddressingModes::Accumulator.get_operand(&cpu);
