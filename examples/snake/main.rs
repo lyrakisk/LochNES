@@ -1,6 +1,7 @@
 use rand::Rng;
-use LochNES::bus::*;
+use LochNES::cpu::mappers::*;
 use LochNES::cpu::*;
+use LochNES::memory::Memory;
 use LochNES::rom::*;
 
 use sdl2::event::Event;
@@ -9,9 +10,10 @@ use sdl2::pixels::Color;
 use sdl2::pixels::PixelFormatEnum;
 use sdl2::EventPump;
 
+use std::cell::RefCell;
 use std::fs::read;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::rc::Rc;
 fn main() {
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
@@ -35,22 +37,18 @@ fn main() {
 
     let rom_bytes = read(PathBuf::from("examples/snake/snake.nes")).unwrap();
     let rom = Rom::try_from(&rom_bytes).unwrap();
-    let cpu_bus = Arc::new(Mutex::new(Bus::new()));
-
-    let mut cpu = CPU::new(cpu_bus.clone());
+    let cpu_mapper = Rc::new(RefCell::new(BasicMapper::new()));
+    let mut cpu = CPU::new(cpu_mapper.clone());
 
     println!("rom len: {}", rom.prg_rom.len());
     cpu.load(rom.prg_rom);
     cpu.reset();
 
     loop {
-        handle_user_input(cpu_bus.clone(), &mut event_pump);
-        cpu_bus
-            .lock()
-            .unwrap()
-            .mem_write(0xfe, rng.gen_range(1, 16));
+        handle_user_input(cpu_mapper.clone(), &mut event_pump);
+        cpu_mapper.borrow_mut().write_u8(0xfe, rng.gen_range(1, 16));
 
-        if read_screen_state(cpu_bus.clone(), &mut screen_state) {
+        if read_screen_state(cpu_mapper.clone(), &mut screen_state) {
             texture.update(None, &screen_state, 32 * 3).unwrap();
             canvas.copy(&texture, None, None).unwrap();
             canvas.present();
@@ -61,7 +59,7 @@ fn main() {
         cpu.execute_next_instruction();
     }
 }
-fn handle_user_input(bus: Arc<Mutex<Bus>>, event_pump: &mut EventPump) {
+fn handle_user_input(mapper: Rc<RefCell<BasicMapper>>, event_pump: &mut EventPump) {
     for event in event_pump.poll_iter() {
         match event {
             Event::Quit { .. }
@@ -73,25 +71,25 @@ fn handle_user_input(bus: Arc<Mutex<Bus>>, event_pump: &mut EventPump) {
                 keycode: Some(Keycode::W),
                 ..
             } => {
-                bus.lock().unwrap().mem_write(0xff, 0x77);
+                mapper.borrow_mut().write_u8(0xff, 0x77);
             }
             Event::KeyDown {
                 keycode: Some(Keycode::S),
                 ..
             } => {
-                bus.lock().unwrap().mem_write(0xff, 0x73);
+                mapper.borrow_mut().write_u8(0xff, 0x73);
             }
             Event::KeyDown {
                 keycode: Some(Keycode::A),
                 ..
             } => {
-                bus.lock().unwrap().mem_write(0xff, 0x61);
+                mapper.borrow_mut().write_u8(0xff, 0x61);
             }
             Event::KeyDown {
                 keycode: Some(Keycode::D),
                 ..
             } => {
-                bus.lock().unwrap().mem_write(0xff, 0x64);
+                mapper.borrow_mut().write_u8(0xff, 0x64);
             }
             _ => { /* do nothing */ }
         }
@@ -112,11 +110,11 @@ fn color(byte: u8) -> Color {
     }
 }
 
-fn read_screen_state(bus: Arc<Mutex<Bus>>, frame: &mut [u8; 32 * 3 * 32]) -> bool {
+fn read_screen_state(mapper: Rc<RefCell<BasicMapper>>, frame: &mut [u8; 32 * 3 * 32]) -> bool {
     let mut frame_idx = 0;
     let mut update = false;
     for i in 0x0200..0x600 {
-        let color_idx = bus.lock().unwrap().mem_read(i as u16);
+        let color_idx = mapper.borrow().read_u8(i as u16);
         let (b1, b2, b3) = color(color_idx).rgb();
         if frame[frame_idx] != b1 || frame[frame_idx + 1] != b2 || frame[frame_idx + 2] != b3 {
             frame[frame_idx] = b1;

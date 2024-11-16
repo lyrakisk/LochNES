@@ -365,7 +365,7 @@ fn asl(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
         }
         _ => {
             let operand_address = instruction.addressing_mode.get_operand_address(&cpu);
-            cpu.bus.lock().unwrap().mem_write(operand_address, result);
+            cpu.mapper.borrow_mut().write_u8(operand_address, result);
         }
     }
 
@@ -386,7 +386,7 @@ fn bcc(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     };
     match cpu.get_flag_state(STATUS_FLAG_CARRY) {
         FlagStates::CLEAR => {
-            let distance = cpu.bus.lock().unwrap().mem_read(cpu.program_counter);
+            let distance = cpu.mapper.borrow().read_u8(cpu.program_counter);
             let page_crossed = cpu.branch_off_program_counter(distance);
             instruction_result.executed_cycles += 1;
             instruction_result.executed_cycles += page_crossed as u8;
@@ -402,7 +402,7 @@ fn bcs(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     };
     match cpu.get_flag_state(STATUS_FLAG_CARRY) {
         FlagStates::SET => {
-            let distance = cpu.bus.lock().unwrap().mem_read(cpu.program_counter);
+            let distance = cpu.mapper.borrow().read_u8(cpu.program_counter);
             let page_crossed = cpu.branch_off_program_counter(distance);
             instruction_result.executed_cycles += 1;
             instruction_result.executed_cycles += page_crossed as u8;
@@ -418,7 +418,7 @@ fn beq(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     };
     match cpu.get_flag_state(STATUS_FLAG_ZERO) {
         FlagStates::SET => {
-            let distance = cpu.bus.lock().unwrap().mem_read(cpu.program_counter);
+            let distance = cpu.mapper.borrow().read_u8(cpu.program_counter);
             let page_crossed = cpu.branch_off_program_counter(distance);
             instruction_result.executed_cycles += 1;
             instruction_result.executed_cycles += page_crossed as u8;
@@ -452,7 +452,7 @@ fn bmi(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     };
     match cpu.get_flag_state(STATUS_FLAG_NEGATIVE) {
         FlagStates::SET => {
-            let distance = cpu.bus.lock().unwrap().mem_read(cpu.program_counter);
+            let distance = cpu.mapper.borrow().read_u8(cpu.program_counter);
             let page_crossed = cpu.branch_off_program_counter(distance);
             instruction_result.executed_cycles += 1;
             instruction_result.executed_cycles += page_crossed as u8;
@@ -468,7 +468,7 @@ fn bne(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     };
     match cpu.get_flag_state(STATUS_FLAG_ZERO) {
         FlagStates::CLEAR => {
-            let distance = cpu.bus.lock().unwrap().mem_read(cpu.program_counter);
+            let distance = cpu.mapper.borrow().read_u8(cpu.program_counter);
             let page_crossed = cpu.branch_off_program_counter(distance);
             instruction_result.executed_cycles += 1;
             instruction_result.executed_cycles += page_crossed as u8;
@@ -484,7 +484,7 @@ fn bpl(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     };
     match cpu.get_flag_state(STATUS_FLAG_NEGATIVE) {
         FlagStates::CLEAR => {
-            let distance = cpu.bus.lock().unwrap().mem_read(cpu.program_counter);
+            let distance = cpu.mapper.borrow().read_u8(cpu.program_counter);
             let page_crossed = cpu.branch_off_program_counter(distance);
             instruction_result.executed_cycles += 1;
             instruction_result.executed_cycles += page_crossed as u8;
@@ -500,7 +500,7 @@ fn bvc(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     };
     match cpu.get_flag_state(STATUS_FLAG_OVERFLOW) {
         FlagStates::CLEAR => {
-            let distance = cpu.bus.lock().unwrap().mem_read(cpu.program_counter);
+            let distance = cpu.mapper.borrow().read_u8(cpu.program_counter);
             let page_crossed = cpu.branch_off_program_counter(distance);
             instruction_result.executed_cycles += 1;
             instruction_result.executed_cycles += page_crossed as u8;
@@ -516,7 +516,7 @@ fn bvs(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     };
     match cpu.get_flag_state(STATUS_FLAG_OVERFLOW) {
         FlagStates::SET => {
-            let distance = cpu.bus.lock().unwrap().mem_read(cpu.program_counter);
+            let distance = cpu.mapper.borrow().read_u8(cpu.program_counter);
             let page_crossed = cpu.branch_off_program_counter(distance);
             instruction_result.executed_cycles += 1;
             instruction_result.executed_cycles += page_crossed as u8;
@@ -527,7 +527,7 @@ fn bvs(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
 }
 
 fn brk(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
-    let interrupt_vector = cpu.bus.lock().unwrap().mem_read_u16(0xFFFE);
+    let interrupt_vector = cpu.mapper.borrow().read_u16(0xFFFE);
     cpu.stack_push_u16(cpu.program_counter.wrapping_add(1));
     cpu.stack_push(cpu.status | 0b0001_0000);
     cpu.set_flag(STATUS_FLAG_INTERRUPT_DISABLE);
@@ -624,8 +624,8 @@ fn cpy(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
 
 fn dec(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     let address = instruction.addressing_mode.get_operand_address(&cpu);
-    let result = cpu.bus.lock().unwrap().mem_read(address).wrapping_sub(1);
-    cpu.bus.lock().unwrap().mem_write(address, result);
+    let result = cpu.mapper.borrow().read_u8(address).wrapping_sub(1);
+    cpu.mapper.borrow_mut().write_u8(address, result);
     cpu.update_zero_flag(result);
     cpu.update_negative_flag(result);
     return InstructionResult {
@@ -716,7 +716,7 @@ fn lsr(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
         }
         _ => {
             let address = instruction.addressing_mode.get_operand_address(&cpu);
-            cpu.bus.lock().unwrap().mem_write(address, result);
+            cpu.mapper.borrow_mut().write_u8(address, result);
         }
     }
 
@@ -781,8 +781,8 @@ fn pla(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
 
 fn inc(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     let address = instruction.addressing_mode.get_operand_address(&cpu);
-    let result = cpu.bus.lock().unwrap().mem_read(address).wrapping_add(1);
-    cpu.bus.lock().unwrap().mem_write(address, result);
+    let result = cpu.mapper.borrow().read_u8(address).wrapping_add(1);
+    cpu.mapper.borrow_mut().write_u8(address, result);
     cpu.update_zero_flag(result);
     cpu.update_negative_flag(result);
     return InstructionResult {
@@ -826,7 +826,7 @@ fn rla(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     }
 
     let address = instruction.addressing_mode.get_operand_address(&cpu);
-    cpu.bus.lock().unwrap().mem_write(address, result);
+    cpu.mapper.borrow_mut().write_u8(address, result);
 
     cpu.register_a = cpu.register_a & result;
 
@@ -866,7 +866,7 @@ fn rol(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
         }
         _ => {
             let address = instruction.addressing_mode.get_operand_address(&cpu);
-            cpu.bus.lock().unwrap().mem_write(address, result);
+            cpu.mapper.borrow_mut().write_u8(address, result);
         }
     }
 
@@ -905,7 +905,7 @@ fn ror(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
         }
         _ => {
             let address = instruction.addressing_mode.get_operand_address(&cpu);
-            cpu.bus.lock().unwrap().mem_write(address, result);
+            cpu.mapper.borrow_mut().write_u8(address, result);
         }
     }
 
@@ -1015,7 +1015,7 @@ fn slo(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
         }
         _ => {
             let operand_address = instruction.addressing_mode.get_operand_address(&cpu);
-            cpu.bus.lock().unwrap().mem_write(operand_address, result);
+            cpu.mapper.borrow_mut().write_u8(operand_address, result);
         }
     }
 
@@ -1041,7 +1041,7 @@ fn sei(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
 }
 fn sta(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     let address = instruction.addressing_mode.get_operand_address(&cpu);
-    cpu.bus.lock().unwrap().mem_write(address, cpu.register_a);
+    cpu.mapper.borrow_mut().write_u8(address, cpu.register_a);
     return InstructionResult {
         executed_cycles: instruction.cycles,
     };
@@ -1049,14 +1049,14 @@ fn sta(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
 
 fn stx(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     let address = instruction.addressing_mode.get_operand_address(&cpu);
-    cpu.bus.lock().unwrap().mem_write(address, cpu.register_x);
+    cpu.mapper.borrow_mut().write_u8(address, cpu.register_x);
     return InstructionResult {
         executed_cycles: instruction.cycles,
     };
 }
 fn sty(instruction: &Instruction, cpu: &mut CPU) -> InstructionResult {
     let address = instruction.addressing_mode.get_operand_address(&cpu);
-    cpu.bus.lock().unwrap().mem_write(address, cpu.register_y);
+    cpu.mapper.borrow_mut().write_u8(address, cpu.register_y);
     return InstructionResult {
         executed_cycles: instruction.cycles,
     };

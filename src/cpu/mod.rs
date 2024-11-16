@@ -1,10 +1,12 @@
 mod addressing_modes;
 mod instructions;
+pub mod mappers;
 
-use crate::bus::*;
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use crate::cpu::instructions::*;
-
-use std::sync::{Arc, Mutex};
+use crate::memory::Memory;
 
 pub const STATUS_FLAG_NEGATIVE: u8 = 0b10000000;
 pub const STATUS_FLAG_OVERFLOW: u8 = 0b01000000;
@@ -20,7 +22,7 @@ enum FlagStates {
     SET = 1,
 }
 
-#[derive(Debug)]
+// #[derive(Debug)]
 pub struct CPU {
     register_a: u8,
     register_x: u8,
@@ -28,11 +30,11 @@ pub struct CPU {
     status: u8,
     program_counter: u16,
     stack_pointer: u8,
-    bus: Arc<Mutex<Bus>>,
+    mapper: Rc<RefCell<dyn Memory>>,
 }
 
 impl CPU {
-    pub fn new(bus: Arc<Mutex<Bus>>) -> Self {
+    pub fn new(mapper: Rc<RefCell<dyn Memory>>) -> Self {
         CPU {
             register_a: 0,
             register_x: 0, // todo: check reference, should this be initialized?
@@ -40,7 +42,7 @@ impl CPU {
             status: 0, // todo: according to nesdev wiki, the 5th bit is always 1, https://www.nesdev.org/wiki/Status_flags
             program_counter: 0x8000,
             stack_pointer: 0xFF,
-            bus: bus,
+            mapper,
         }
     }
 
@@ -48,7 +50,7 @@ impl CPU {
         self.register_a = 0;
         self.register_x = 0;
         self.status = 0;
-        self.program_counter = self.bus.lock().unwrap().mem_read_u16(0xFFFC);
+        self.program_counter = self.mapper.borrow().read_u16(0xFFFC);
     }
 
     pub fn run(&mut self) {
@@ -94,7 +96,7 @@ impl CPU {
     }
 
     fn fetch(&mut self) -> u8 {
-        let opcode = self.bus.lock().unwrap().mem_read(self.program_counter);
+        let opcode = self.mapper.borrow().read_u8(self.program_counter);
         self.program_counter = self.program_counter.wrapping_add(1);
         return opcode;
     }
@@ -110,56 +112,49 @@ impl CPU {
     pub fn load(&mut self, program: Vec<u8>) {
         for address in self.program_counter..=(self.program_counter - 1 + program.len() as u16) {
             let program_address = (address).wrapping_sub(self.program_counter) as usize;
-            self.bus
-                .lock()
-                .unwrap()
-                .mem_write(address as u16, program[program_address]);
+            self.mapper
+                .borrow_mut()
+                .write_u8(address as u16, program[program_address]);
         }
     }
 
     fn stack_pop(&mut self) -> u8 {
         self.stack_pointer = self.stack_pointer.wrapping_add(1);
         return self
-            .bus
-            .lock()
-            .unwrap()
-            .mem_read(0x0100 + (self.stack_pointer as u16));
+            .mapper
+            .borrow()
+            .read_u8(0x0100 + (self.stack_pointer as u16));
     }
     fn stack_pop_u16(&mut self) -> u16 {
         self.stack_pointer = self.stack_pointer.wrapping_add(1);
         let low_order_byte = self
-            .bus
-            .lock()
-            .unwrap()
-            .mem_read(0x0100 + (self.stack_pointer as u16));
+            .mapper
+            .borrow()
+            .read_u8(0x0100 + (self.stack_pointer as u16));
         self.stack_pointer = self.stack_pointer.wrapping_add(1);
         let high_order_byte = self
-            .bus
-            .lock()
-            .unwrap()
-            .mem_read(0x0100 + (self.stack_pointer as u16));
+            .mapper
+            .borrow()
+            .read_u8(0x0100 + (self.stack_pointer as u16));
 
         return u16::from_le_bytes([low_order_byte, high_order_byte]).wrapping_add(1);
     }
 
     fn stack_push(&mut self, data: u8) {
-        self.bus
-            .lock()
-            .unwrap()
-            .mem_write(0x0100 + (self.stack_pointer as u16), data);
+        self.mapper
+            .borrow_mut()
+            .write_u8(0x0100 + (self.stack_pointer as u16), data);
         self.stack_pointer = self.stack_pointer.wrapping_sub(1);
     }
     fn stack_push_u16(&mut self, data: u16) {
         let bytes = data.to_le_bytes();
-        self.bus
-            .lock()
-            .unwrap()
-            .mem_write(0x0100 + (self.stack_pointer as u16), bytes[1]);
+        self.mapper
+            .borrow_mut()
+            .write_u8(0x0100 + (self.stack_pointer as u16), bytes[1]);
         self.stack_pointer = self.stack_pointer.wrapping_sub(1);
-        self.bus
-            .lock()
-            .unwrap()
-            .mem_write(0x0100 + (self.stack_pointer as u16), bytes[0]);
+        self.mapper
+            .borrow_mut()
+            .write_u8(0x0100 + (self.stack_pointer as u16), bytes[0]);
         self.stack_pointer = self.stack_pointer.wrapping_sub(1);
     }
 
@@ -219,27 +214,28 @@ impl CPU {
 #[cfg(test)]
 mod test_cpu {
     use super::*;
+    use crate::cpu::mappers::BasicMapper;
     use json::JsonValue;
     use test_case::test_case;
 
     #[test]
     fn test_load() {
-        let bus = Bus::new();
-        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
+        let mapper = Rc::new(RefCell::new((BasicMapper::new())));
+        let mut cpu = CPU::new(mapper);
         cpu.program_counter = 0x8000;
         let program = vec![0xAA, 0x35, 0xFF, 0x00];
         cpu.load(program);
-        assert_eq!(0xAA, cpu.bus.lock().unwrap().mem_read(0x8000));
-        assert_eq!(0x35, cpu.bus.lock().unwrap().mem_read(0x8001));
-        assert_eq!(0xFF, cpu.bus.lock().unwrap().mem_read(0x8002));
-        assert_eq!(0x00, cpu.bus.lock().unwrap().mem_read(0x8003));
+        assert_eq!(0xAA, cpu.mapper.borrow().read_u8(0x8000));
+        assert_eq!(0x35, cpu.mapper.borrow().read_u8(0x8001));
+        assert_eq!(0xFF, cpu.mapper.borrow().read_u8(0x8002));
+        assert_eq!(0x00, cpu.mapper.borrow().read_u8(0x8003));
     }
 
     #[test_case(0b0, 0b0000_0010)]
     #[test_case(0b10, 0b0)]
     fn test_update_zero_flag(register: u8, expected: u8) {
-        let bus = Bus::new();
-        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
+        let mapper = Rc::new(RefCell::new(BasicMapper::new()));
+        let mut cpu = CPU::new(mapper);
         cpu.update_zero_flag(register);
         assert_eq!(cpu.status, expected);
     }
@@ -451,9 +447,9 @@ mod test_cpu {
         let name = &test["name"];
         println!("Testing with instructions: {}", name);
 
-        let final_cpu = cpu_from_json_value(&test["final"]);
+        let (final_cpu, final_mapper) = parse_json_value(&test["final"]);
 
-        let mut cpu = cpu_from_json_value(&test["initial"]);
+        let (mut cpu, mapper) = parse_json_value(&test["initial"]);
 
         let executed_cycles = cpu.execute_next_instruction().executed_cycles;
         let expected_cycles = test["cycles"].members().count() as u8;
@@ -492,20 +488,18 @@ mod test_cpu {
             final_cpu.stack_pointer, cpu.stack_pointer
         );
 
-        let cpu_bus = (*cpu.bus.lock().unwrap()).clone();
-        let final_cpu_bus = (*final_cpu.bus.lock().unwrap()).clone();
-        assert_eq!(cpu_bus, final_cpu_bus, "Memories don't match!",);
+        assert_eq!(mapper, final_mapper, "Memories don't match!",);
     }
 
-    fn cpu_from_json_value(json_value: &JsonValue) -> CPU {
-        let mut bus = Bus::new();
+    fn parse_json_value(json_value: &JsonValue) -> (CPU, Rc<RefCell<BasicMapper>>) {
+        let mapper = Rc::new(RefCell::new(BasicMapper::new()));
         for ram_tuple in json_value["ram"].members() {
-            bus.mem_write(
+            mapper.borrow_mut().write_u8(
                 ram_tuple[0].as_u16().unwrap(),
                 ram_tuple[1].as_u8().unwrap(),
             );
         }
-        let mut cpu = CPU::new(Arc::new(Mutex::new(bus)));
+        let mut cpu = CPU::new(mapper.clone());
 
         cpu.program_counter = json_value["pc"].as_u16().unwrap();
         cpu.status = json_value["p"].as_u8().unwrap();
@@ -514,14 +508,13 @@ mod test_cpu {
         cpu.register_y = json_value["y"].as_u8().unwrap();
         cpu.stack_pointer = json_value["s"].as_u8().unwrap();
 
-        return cpu;
+        return (cpu, mapper.clone());
     }
 
     #[test]
     fn test_example() {
         let test_case  = "{ \"name\": \"03 6e 78\", \"initial\": { \"pc\": 63085, \"s\": 16, \"a\": 140, \"x\": 122, \"y\": 205, \"p\": 38, \"ram\": [ [63085, 3], [63086, 110], [63087, 120], [110, 248], [232, 110], [233, 246]]}, \"final\": { \"pc\": 63087, \"s\": 16, \"a\": 220, \"x\": 122, \"y\": 205, \"p\": 164, \"ram\": [ [110, 248], [232, 110], [233, 246], [63085, 3], [63086, 220], [63087, 120]]}, \"cycles\": [ [63085, 3, \"read\"], [63086, 110, \"read\"], [110, 248, \"read\"], [232, 110, \"read\"], [233, 246, \"read\"], [63086, 110, \"read\"], [63086, 110, \"write\"], [63086, 220, \"write\"]] }";
         let json_value = json::parse(test_case).unwrap();
-        // println!("{json_value}");
         run_test(&json_value);
     }
 }

@@ -1,11 +1,4 @@
-use std::sync::{Arc, Mutex};
-
-use crate::bus::Bus;
-
-// registers
-
 pub struct PPU {
-    bus: Arc<Mutex<Bus>>,
     ppuctrl: u16,
     ppumask: u16,
     ppustatus: u16,
@@ -17,9 +10,8 @@ pub struct PPU {
 }
 
 impl PPU {
-    pub fn new(bus: Arc<Mutex<Bus>>) -> Self {
+    pub fn new() -> Self {
         PPU {
-            bus: bus,
             ppuctrl: 0b0000_0000,
             ppumask: 0b0000_0000,
             ppustatus: 0b1010_0000,
@@ -54,8 +46,7 @@ mod test_ppu {
     #[test]
     fn test_power_up_state() {
         // Test Power-up state as documented in https://www.nesdev.org/wiki/PPU_power_up_state
-        let bus = Arc::new(Mutex::new(Bus::new()));
-        let ppu = PPU::new(bus.clone());
+        let ppu = PPU::new();
 
         assert_eq!(0b0000_0000, ppu.ppuctrl);
         assert_eq!(0b0000_0000, ppu.ppumask);

@@ -10,7 +10,7 @@ A (soon to be) fully-featured NES emulator written in Rust.
 ## Technical Roadmap
 - [X] CPU
   - no illegal opcodes yet
-- [ ] Bus
+- [ ] Memory Mappers
 - [ ] PPU
 - [ ] APU
 
