@@ -1,5 +1,5 @@
 use rand::Rng;
-use LochNES::cpu::mappers::*;
+use LochNES::cpu::mappers::test_mapper::TestMapper;
 use LochNES::cpu::*;
 use LochNES::memory::Memory;
 use LochNES::rom::*;

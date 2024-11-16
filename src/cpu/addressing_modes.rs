@@ -133,7 +133,7 @@ impl AddressingModes {
 #[cfg(test)]
 mod test_addressing_modes {
     use super::*;
-    use crate::cpu::mappers::TestMapper;
+    use crate::cpu::mappers::test_mapper::TestMapper;
     #[test]
     fn test_addressing_mode_immediate() {
         let mapper = Rc::new(RefCell::new(TestMapper::new()));

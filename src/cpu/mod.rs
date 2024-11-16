@@ -214,7 +214,7 @@ impl CPU {
 #[cfg(test)]
 mod test_cpu {
     use super::*;
-    use crate::cpu::mappers::TestMapper;
+    use crate::cpu::mappers::test_mapper::TestMapper;
     use json::JsonValue;
     use test_case::test_case;
 
