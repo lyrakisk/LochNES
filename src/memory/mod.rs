@@ -1,5 +1,3 @@
-use std::fmt::Debug;
-
 pub trait Memory {
     fn read_u8(&self, address: u16) -> u8;
 
