@@ -1,5 +1,6 @@
+mod frame;
 mod registers;
-
+use crate::ppu::frame::Frame;
 use crate::ppu::registers::control::Control;
 
 pub struct PPU {
@@ -11,6 +12,7 @@ pub struct PPU {
     ppuscroll: u16,
     ppuaddr: u16,
     ppudata: u16,
+    pub frame: Frame,
 }
 
 impl PPU {
@@ -24,20 +26,22 @@ impl PPU {
             ppuscroll: 0b0000_0000,
             ppuaddr: 0b0000_0000,
             ppudata: 0b0000_0000,
+            frame: Frame::new(),
         }
     }
+
     pub fn load() {
         todo!()
     }
-    
+
     pub fn tick() {
         todo!()
     }
-    
+
     pub fn render_pixel() {
         todo!()
     }
-    
+
     pub fn evaluate_sprite() {
         todo!()
     }
@@ -47,7 +51,7 @@ impl PPU {
 mod test_ppu {
     use super::*;
     use crate::ppu::registers::Register;
-    
+
     #[test]
     fn test_power_up_state() {
         // Test Power-up state as documented in https://www.nesdev.org/wiki/PPU_power_up_state
