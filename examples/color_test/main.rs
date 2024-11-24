@@ -21,18 +21,18 @@ fn main() {
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
     let window = video_subsystem
-        .window("Color Test", (32.0 * 10.0) as u32, (32.0 * 10.0) as u32)
+        .window("Color Test", (256.0 * 3.0) as u32, (240.0 * 3.0) as u32)
         .position_centered()
         .build()
         .unwrap();
 
     let mut canvas = window.into_canvas().present_vsync().build().unwrap();
     let mut event_pump = sdl_context.event_pump().unwrap();
-    canvas.set_scale(10.0, 10.0).unwrap();
+    canvas.set_scale(3.0, 3.0).unwrap();
 
     let creator = canvas.texture_creator();
     let mut texture = creator
-        .create_texture_target(PixelFormatEnum::RGB24, 32, 32)
+        .create_texture_target(PixelFormatEnum::RGB24, 256, 240)
         .unwrap();
 
     let mut rng = rand::thread_rng();
@@ -53,7 +53,7 @@ fn main() {
         cpu_mapper.borrow_mut().write_u8(0xfe, rng.gen_range(1, 16));
 
         texture
-            .update(None, &ppu.borrow().frame.bytes, 256)
+            .update(None, &ppu.borrow().frame.bytes, 256 * 3)
             .unwrap();
         canvas.copy(&texture, None, None).unwrap();
         canvas.present();
