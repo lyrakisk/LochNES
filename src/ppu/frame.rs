@@ -1,16 +1,15 @@
-const WIDTH: u16 = 256;
-const HEIGHT: u16 = 240;
-const SIZE: usize = (WIDTH * HEIGHT) as usize;
+const WIDTH: usize = 256;
+const HEIGHT: usize = 240;
+// width is multiplied by 3, because each pixel needs 3 u8 values to represent its RGB colors
+const SIZE: usize = (WIDTH * 3 * HEIGHT) as usize; 
 
 pub struct Frame {
     pub bytes: [u8; SIZE],
 }
 
 impl Frame {
-    pub const WIDTH: u16 = WIDTH;
-
     pub fn new() -> Self {
-        Frame { bytes: [0; SIZE] }
+        Frame { bytes: [0; SIZE]}
     }
 }
 
