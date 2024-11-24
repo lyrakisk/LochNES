@@ -90,7 +90,7 @@ impl Memory for BasicMapper {
                 ]);
             }
             PPU_REGISTERS_START..=PPU_REGISTERS_MIRRORS_END => {
-                todo!("PPU registers not implemented yet")
+                panic!("Can't read 2 bytes from PPU registers")
             }
             ROM_START..=ROM_END => {
                 let rom_address = self.calculate_rom_address(address);
@@ -124,7 +124,7 @@ impl Memory for BasicMapper {
                 self.ram[index + 1] = bytes[1];
             }
             PPU_REGISTERS_START..=PPU_REGISTERS_MIRRORS_END => {
-                todo!("PPU registers not implemented yet")
+                todo!("Can't write 2 bytes to a PPU register")
             }
             _ => panic!(
                 "Attempt to write read-only memory at address {:0x}",
