@@ -2,6 +2,7 @@ use rand::Rng;
 use LochNES::cpu::mappers::basic_mapper::*;
 use LochNES::cpu::*;
 use LochNES::memory::Memory;
+use LochNES::ppu::PPU;
 use LochNES::rom::*;
 
 use sdl2::event::Event;
@@ -37,7 +38,8 @@ fn main() {
 
     let rom_bytes = read(PathBuf::from("examples/snake/snake.nes")).unwrap();
     let rom = Rom::try_from(&rom_bytes).unwrap();
-    let cpu_mapper = Rc::new(RefCell::new(BasicMapper::new(rom.clone())));
+    let ppu = Rc::new(RefCell::new(PPU::new()));
+    let cpu_mapper = Rc::new(RefCell::new(BasicMapper::new(rom.clone(), ppu.clone())));
     let mut cpu = CPU::new(cpu_mapper.clone());
 
     println!("rom len: {}", rom.prg_rom.len());
@@ -53,7 +55,7 @@ fn main() {
             canvas.present();
         }
 
-        ::std::thread::sleep(std::time::Duration::new(0, 20_000));
+        ::std::thread::sleep(std::time::Duration::new(0, 2000));
 
         cpu.execute_next_instruction();
     }

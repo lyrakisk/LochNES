@@ -1,6 +1,9 @@
 use core::panic;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use crate::memory::*;
+use crate::ppu::PPU;
 use crate::rom::*;
 
 const RAM_START: u16 = 0x0000;
@@ -12,13 +15,15 @@ const ROM_END: u16 = 0xFFFF;
 pub struct BasicMapper {
     ram: [u8; 2048],
     rom: Rom,
+    ppu: Rc<RefCell<PPU>>,
 }
 
 impl BasicMapper {
-    pub fn new(rom: Rom) -> Self {
+    pub fn new(rom: Rom, ppu: Rc<RefCell<PPU>>) -> Self {
         BasicMapper {
             ram: [0; 2048],
             rom: rom,
+            ppu: ppu,
         }
     }
 
@@ -40,7 +45,7 @@ impl Memory for BasicMapper {
                 return self.ram[mirror_down_address as usize];
             }
             PPU_REGISTERS_START..=PPU_REGISTERS_MIRRORS_END => {
-                todo!("PPU registers not implemented yet")
+                return self.ppu.borrow().read_register(address);
             }
             ROM_START..=ROM_END => self.rom.prg_rom[self.calculate_rom_address(address) as usize],
             _ => panic!("Can't read address {}", address),
@@ -50,7 +55,16 @@ impl Memory for BasicMapper {
     fn write_u8(&mut self, address: u16, data: u8) {
         match address {
             RAM_START..=RAM_MIRRORS_END => self.ram[address as usize] = data,
-            _ => panic!("Attempt to write read-only memory at address {}", address),
+            PPU_REGISTERS_START..=PPU_REGISTERS_MIRRORS_END => {
+                self.ppu.borrow_mut().write_register(address, data);
+            }
+            0x4016..=0x4017 => {
+                println!("Joypads not implemented yet")
+            }
+            _ => println!(
+                "Attempt to write read-only memory at address {:0x}",
+                address
+            ),
         }
     }
 
@@ -98,7 +112,13 @@ impl Memory for BasicMapper {
                 self.ram[index] = bytes[0];
                 self.ram[index + 1] = bytes[1];
             }
-            _ => panic!("Attempt to write read-only memory at address {}", address),
+            PPU_REGISTERS_START..=PPU_REGISTERS_MIRRORS_END => {
+                todo!("PPU registers not implemented yet")
+            }
+            _ => panic!(
+                "Attempt to write read-only memory at address {:0x}",
+                address
+            ),
         }
     }
 }
