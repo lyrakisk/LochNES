@@ -38,25 +38,12 @@ impl PPU {
         self.control.write(data);
     }
 
-    pub fn read_status(&self)-> u8 {
+    pub fn read_status(&self) -> u8 {
         self.status.read()
     }
 
-
     pub fn write_mask(&mut self, data: u8) {
         self.mask.write(data)
-    }
-
-    pub fn tick() {
-        todo!()
-    }
-
-    pub fn render_pixel() {
-        todo!()
-    }
-
-    pub fn evaluate_sprite() {
-        todo!()
     }
 }
 
@@ -76,6 +63,4 @@ mod test_ppu {
         assert_eq!(0b0000_0000, ppu.ppuaddr);
         assert_eq!(0b0000_0000, ppu.ppudata);
     }
-
-    // todo: test reset
 }
