@@ -17,6 +17,7 @@ pub struct PPU {
     ppuaddr: u16,
     ppudata: u16,
     pub frame: Frame,
+    pub vram: [u8; 2048],
 }
 
 impl PPU {
@@ -31,6 +32,7 @@ impl PPU {
             ppuaddr: 0b0000_0000,
             ppudata: 0b0000_0000,
             frame: Frame::new(),
+            vram: [0; 2048]
         }
     }
 
@@ -62,5 +64,6 @@ mod test_ppu {
         assert_eq!(0b0000_0000, ppu.ppuscroll);
         assert_eq!(0b0000_0000, ppu.ppuaddr);
         assert_eq!(0b0000_0000, ppu.ppudata);
+        assert_eq!([0; 2048], ppu.vram)
     }
 }
