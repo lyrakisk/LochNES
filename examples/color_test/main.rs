@@ -39,12 +39,13 @@ fn main() {
 
     let rom_bytes = read(PathBuf::from("examples/color_test/color_test.nes")).unwrap();
     let rom = Rom::try_from(&rom_bytes).unwrap();
-    let ppu = Rc::new(RefCell::new(PPU::new()));
-    let cpu_mapper = Rc::new(RefCell::new(BasicMapper::new(rom.clone(), ppu.clone())));
-    let mut cpu = CPU::new(cpu_mapper.clone());
-
     println!("prg rom len: {}", rom.prg_rom.len());
     println!("chr rom len: {}", rom.chr_rom.len());
+
+    let ppu = Rc::new(RefCell::new(PPU::new()));
+    let cpu_mapper = Rc::new(RefCell::new(BasicMapper::new(rom, ppu.clone())));
+    let mut cpu = CPU::new(cpu_mapper.clone());
+
     cpu.reset();
 
     loop {
