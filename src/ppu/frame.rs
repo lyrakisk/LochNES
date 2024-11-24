@@ -1,7 +1,7 @@
 const WIDTH: usize = 256;
 const HEIGHT: usize = 240;
 // width is multiplied by 3, because each pixel needs 3 u8 values to represent its RGB colors
-const SIZE: usize = (WIDTH * 3 * HEIGHT) as usize; 
+const SIZE: usize = (WIDTH * 3 * HEIGHT) as usize;
 
 pub struct Frame {
     pub bytes: [u8; SIZE],
@@ -9,7 +9,7 @@ pub struct Frame {
 
 impl Frame {
     pub fn new() -> Self {
-        Frame { bytes: [0; SIZE]}
+        Frame { bytes: [0; SIZE] }
     }
 }
 
@@ -27,6 +27,6 @@ mod test_frame {
     #[test]
     fn test_frame_bytes_size() {
         let frame = Frame::new();
-        assert_eq!(256 * 240, frame.bytes.len());
+        assert_eq!(256 * 3 * 240, frame.bytes.len());
     }
 }
