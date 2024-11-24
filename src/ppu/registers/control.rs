@@ -1,4 +1,4 @@
-use crate::ppu::registers::{ReadRegister, WriteRegister};
+use crate::ppu::registers::Register;
 
 pub struct Control {
     value: u8,
@@ -10,13 +10,11 @@ impl Control {
     }
 }
 
-impl ReadRegister for Control {
+impl Register for Control {
     fn read(&self) -> u8 {
         return self.value;
     }
-}
 
-impl WriteRegister for Control {
     fn write(&mut self, data: u8) {
         self.value = data;
     }

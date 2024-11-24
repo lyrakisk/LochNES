@@ -44,9 +44,14 @@ impl Memory for BasicMapper {
                 let mirror_down_address = address & 0b00000111_11111111;
                 return self.ram[mirror_down_address as usize];
             }
-            PPU_REGISTERS_START..=PPU_REGISTERS_MIRRORS_END => {
-                return self.ppu.borrow().read_register(address);
-            }
+            0x2000 => panic!("Control register is write-only!"),
+            0x2001 => panic!("Mask register is write-only!"),
+            0x2002 => self.ppu.borrow().read_status(),
+            0x2003 => todo!("OAMADDR register is not implemented yet!"),
+            0x2004 => todo!("OAMDATA register is not implemented yet!"),
+            0x2005 => panic!("Scroll register is write-only!"),
+            0x2006 => panic!("Address register is not implemented yet!"),
+            0x2007 => panic!("Data register is not implemented yet!"),
             ROM_START..=ROM_END => self.rom.prg_rom[self.calculate_rom_address(address) as usize],
             _ => panic!("Can't read address {}", address),
         }
@@ -55,9 +60,15 @@ impl Memory for BasicMapper {
     fn write_u8(&mut self, address: u16, data: u8) {
         match address {
             RAM_START..=RAM_MIRRORS_END => self.ram[address as usize] = data,
-            PPU_REGISTERS_START..=PPU_REGISTERS_MIRRORS_END => {
-                self.ppu.borrow_mut().write_register(address, data);
-            }
+            0x2000 => self.ppu.borrow_mut().write_control(data),
+            0x2001 => self.ppu.borrow_mut().write_mask(data),
+            0x2002 => panic!("Status register is read-only!"),
+            0x2003 => todo!("OAMADDR register is not implemented yet!"),
+            0x2004 => todo!("OAMDATA register is not implemented yet!"),
+            0x2005 => panic!("Scroll register is not implemented yet!"),
+            0x2006 => panic!("Address register is not implemented yet!"),
+            0x2007 => panic!("Data register is not implemented yet!"),
+
             0x4016..=0x4017 => {
                 println!("Joypads not implemented yet")
             }

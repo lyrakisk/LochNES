@@ -1,16 +1,16 @@
 use crate::ppu::registers::Register;
 
-pub struct Status {
+pub struct Mask {
     value: u8,
 }
 
-impl Status {
+impl Mask {
     pub fn new(value: u8) -> Self {
-        return Status { value };
+        return Mask { value };
     }
 }
 
-impl Register for Status {
+impl Register for Mask {
     fn read(&self) -> u8 {
         return self.value;
     }

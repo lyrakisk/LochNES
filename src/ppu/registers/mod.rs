@@ -1,10 +1,7 @@
 pub mod control;
+pub mod mask;
 pub mod status;
-
-pub trait ReadRegister {
+pub trait Register {
     fn read(&self) -> u8;
-}
-
-pub trait WriteRegister {
     fn write(&mut self, data: u8);
 }
