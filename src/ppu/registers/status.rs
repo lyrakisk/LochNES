@@ -1,4 +1,4 @@
-use crate::ppu::registers::Register;
+use crate::ppu::registers::Register8;
 
 pub struct Status {
     value: u8,
@@ -10,12 +10,12 @@ impl Status {
     }
 }
 
-impl Register for Status {
-    fn read(&self) -> u8 {
+impl Register8 for Status {
+    fn read_u8(&self) -> u8 {
         return self.value;
     }
 
-    fn write(&mut self, data: u8) {
+    fn write_u8(&mut self, data: u8) {
         self.value = data;
     }
 }

@@ -50,7 +50,7 @@ impl Memory for BasicMapper {
             0x2003 => todo!("OAMADDR register is not implemented yet!"),
             0x2004 => todo!("OAMDATA register is not implemented yet!"),
             0x2005 => panic!("Scroll register is write-only!"),
-            0x2006 => panic!("Address register is not implemented yet!"),
+            0x2006 => panic!("Address register is write-only!"),
             0x2007 => panic!("Data register is not implemented yet!"),
             ROM_START..=ROM_END => self.rom.prg_rom[self.calculate_rom_address(address) as usize],
             _ => panic!("Can't read address {}", address),
@@ -66,7 +66,7 @@ impl Memory for BasicMapper {
             0x2003 => todo!("OAMADDR register is not implemented yet!"),
             0x2004 => todo!("OAMDATA register is not implemented yet!"),
             0x2005 => panic!("Scroll register is not implemented yet!"),
-            0x2006 => panic!("Address register is not implemented yet!"),
+            0x2006 => self.ppu.borrow_mut().write_address(data),
             0x2007 => panic!("Data register is not implemented yet!"),
 
             0x4016..=0x4017 => {
