@@ -48,20 +48,27 @@ fn main() {
 
     cpu.reset();
 
+    let mut counter: usize = 0;
     loop {
-        handle_user_input(cpu_mapper.clone(), &mut event_pump);
-        cpu_mapper.borrow_mut().write_u8(0xfe, rng.gen_range(1, 16));
+        // handle_user_input(cpu_mapper.clone(), &mut event_pump);
+        // cpu_mapper.borrow_mut().write_u8(0xfe, rng.gen_range(1, 16));
 
-        texture
-            .update(None, &ppu.borrow().frame.bytes, 256 * 3)
-            .unwrap();
-        canvas.copy(&texture, None, None).unwrap();
-        canvas.present();
+        if counter % 15 == 0 {
+            texture
+                .update(None, &ppu.borrow().frame.bytes, 256 * 3)
+                .unwrap();
+            canvas.copy(&texture, None, None).unwrap();
+            canvas.present();
+        }
 
         ::std::thread::sleep(std::time::Duration::new(0, 20_000));
+        counter += counter.wrapping_add(1);
+        // need to implement joypads
+        let instruction_result = cpu.execute_next_instruction();
 
-        // need to implement joypads for this
-        cpu.execute_next_instruction();
+        for _ in 0..instruction_result.executed_cycles {
+            ppu.borrow_mut().tick();
+        }
     }
 }
 fn handle_user_input(mapper: Rc<RefCell<BasicMapper>>, event_pump: &mut EventPump) {

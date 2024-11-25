@@ -51,7 +51,7 @@ impl Memory for BasicMapper {
             0x2004 => todo!("OAMDATA register is not implemented yet!"),
             0x2005 => panic!("Scroll register is write-only!"),
             0x2006 => panic!("Address register is write-only!"),
-            0x2007 => panic!("Data register is not implemented yet!"),
+            0x2007 => self.ppu.borrow_mut().read_data(),
             ROM_START..=ROM_END => self.rom.prg_rom[self.calculate_rom_address(address) as usize],
             _ => panic!("Can't read address {}", address),
         }
@@ -59,7 +59,9 @@ impl Memory for BasicMapper {
 
     fn write_u8(&mut self, address: u16, data: u8) {
         match address {
-            RAM_START..=RAM_MIRRORS_END => self.ram[address as usize] = data,
+            RAM_START..=RAM_MIRRORS_END => {
+                self.ram[address as usize] = data;
+            }
             0x2000 => self.ppu.borrow_mut().write_control(data),
             0x2001 => self.ppu.borrow_mut().write_mask(data),
             0x2002 => panic!("Status register is read-only!"),
@@ -67,7 +69,7 @@ impl Memory for BasicMapper {
             0x2004 => todo!("OAMDATA register is not implemented yet!"),
             0x2005 => panic!("Scroll register is not implemented yet!"),
             0x2006 => self.ppu.borrow_mut().write_address(data),
-            0x2007 => panic!("Data register is not implemented yet!"),
+            0x2007 => self.ppu.borrow_mut().write_data(data),
 
             0x4016..=0x4017 => {
                 println!("Joypads not implemented yet")

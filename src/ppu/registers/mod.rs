@@ -1,5 +1,6 @@
 pub mod address;
 pub mod control;
+pub mod data;
 pub mod mask;
 pub mod status;
 pub mod write_toggle;

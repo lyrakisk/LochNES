@@ -1,7 +1,8 @@
 mod frame;
 mod registers;
+use registers::data::Data;
 use registers::write_toggle::WriteToggle;
-use registers::{Register16, Register8};
+use registers::{address, Register16, Register8};
 
 use crate::ppu::frame::Frame;
 use crate::ppu::registers::address::Address;
@@ -17,9 +18,10 @@ pub struct PPU {
     oamdata: u16,
     ppuscroll: u16,
     address: Address,
-    ppudata: u16,
+    data: Data,
     pub frame: Frame,
     pub vram: [u8; 2048],
+    pallete_ram: [u8; 32],
     w: WriteToggle,
 }
 
@@ -33,9 +35,10 @@ impl PPU {
             oamdata: 0b0000_0000,
             ppuscroll: 0b0000_0000,
             address: Address::new(0x0000),
-            ppudata: 0b0000_0000,
+            data: Data::new(0b0000_0000),
             frame: Frame::new(),
             vram: [0; 2048],
+            pallete_ram: [0; 32],
             w: WriteToggle::FirstWrite,
         }
     }
@@ -65,6 +68,52 @@ impl PPU {
         self.w.toggle();
     }
 
+    pub fn read_data(&mut self) -> u8 {
+        let result = self.data.read_u8();
+        self.data
+            .write_u8(self.mem_read_u8(self.address.read_u16()));
+        self.increment_address();
+        return result;
+    }
+
+    fn mem_read_u8(&self, address: u16) -> u8 {
+        match address {
+            0x000..=0x0FFF => todo!("CHR Rom not implemented!"),
+            0x2000..=0x2FFF => self.vram[(address - 0x2000) as usize],
+            0x3000..=0x3EFF => panic!("Can't access address {}", address),
+            0x3F00..=0x3F1F => self.pallete_ram[(address - 0x3f00) as usize],
+            0x3F20..=0x3FFF => todo!("Mirroring not implemented!"),
+            _ => panic!("Address {} is out of bounds", address),
+        }
+    }
+
+    pub fn write_data(&mut self, data: u8) {
+        println!("Write {} to address {:0x}", data, self.address.read_u16());
+        self.mem_write_u8(self.address.read_u16(), data);
+        self.increment_address();
+    }
+
+    fn mem_write_u8(&mut self, address: u16, data: u8) {
+        match address {
+            0x000..=0x0FFF => todo!("CHR Rom is write-only."),
+            // todo: get mirroring from cartrige
+            0x2000..=0x2FFF => self.vram[(address & 0b10011111111111 - 0x2000) as usize] = data,
+            0x3000..=0x3EFF => panic!("Can't access address {}", address),
+            0x3F00..=0x3F1F => self.pallete_ram[(address - 0x3f00) as usize] = data,
+            0x3F20..=0x3FFF => {
+                self.pallete_ram[((address & 0b11111100011111) - 0x3f00) as usize] = data
+            }
+            _ => panic!("Address {} is out of bounds", address),
+        }
+    }
+
+    fn increment_address(&mut self) {
+        self.address.write_u16(
+            self.address
+                .read_u16()
+                .wrapping_add(self.control.vram_increment()),
+        );
+    }
     pub fn tick(&mut self) {
         todo!()
     }
@@ -85,7 +134,7 @@ mod test_ppu {
         assert_eq!(0b0000_0000, ppu.ppuscroll);
         assert_eq!(0b0000_0000, ppu.oamaddr);
         assert_eq!(0x0000, ppu.address.read_u16());
-        assert_eq!(0b0000_0000, ppu.ppudata);
+        assert_eq!(0b0000_0000, ppu.data.read_u8());
         assert_eq!([0; 2048], ppu.vram)
     }
 }
