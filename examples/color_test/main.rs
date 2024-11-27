@@ -28,7 +28,7 @@ fn main() {
 
     let mut canvas = window.into_canvas().present_vsync().build().unwrap();
     let mut event_pump = sdl_context.event_pump().unwrap();
-    canvas.set_scale(3.0, 3.0).unwrap();
+    canvas.set_scale(1.0, 1.0).unwrap();
 
     let creator = canvas.texture_creator();
     let mut texture = creator
@@ -48,12 +48,13 @@ fn main() {
 
     cpu.reset();
 
-    let mut counter: usize = 0;
+    let mut total_cycles: usize = 0;
     loop {
-        // handle_user_input(cpu_mapper.clone(), &mut event_pump);
+        handle_user_input(cpu_mapper.clone(), &mut event_pump);
         // cpu_mapper.borrow_mut().write_u8(0xfe, rng.gen_range(1, 16));
 
-        if counter % 15 == 0 {
+        if total_cycles % 3410 == 0 {
+            // println!("cpu total: {}, ppu: {}, scanline: {}",total_cycles, ppu.borrow().cycles, ppu.borrow().scanline);
             texture
                 .update(None, &ppu.borrow().frame.bytes, 256 * 3)
                 .unwrap();
@@ -61,14 +62,15 @@ fn main() {
             canvas.present();
         }
 
-        ::std::thread::sleep(std::time::Duration::new(0, 20_000));
-        counter += counter.wrapping_add(1);
+        // ::std::thread::sleep(std::time::Duration::new(0, 20_000));
         // need to implement joypads
         let instruction_result = cpu.execute_next_instruction();
 
         for _ in 0..instruction_result.executed_cycles {
             ppu.borrow_mut().tick();
         }
+
+        total_cycles += instruction_result.executed_cycles as usize;
     }
 }
 fn handle_user_input(mapper: Rc<RefCell<BasicMapper>>, event_pump: &mut EventPump) {
