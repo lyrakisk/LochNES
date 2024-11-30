@@ -1,4 +1,3 @@
-use rand::Rng;
 use LochNES::cpu::mappers::basic_mapper::*;
 use LochNES::cpu::*;
 use LochNES::memory::Memory;
