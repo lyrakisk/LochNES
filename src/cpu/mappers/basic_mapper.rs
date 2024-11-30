@@ -38,41 +38,71 @@ impl BasicMapper {
 }
 
 impl Memory for BasicMapper {
+    fn nmi_occured(&self) -> bool {
+        let nmi_occured = self.ppu.borrow().nmi_triggered;
+        if nmi_occured {
+            self.ppu.borrow_mut().nmi_triggered = false;
+        }
+        return nmi_occured;
+    }
+
     fn read_u8(&self, address: u16) -> u8 {
         match address {
             RAM_START..=RAM_MIRRORS_END => {
                 let mirror_down_address = address & 0b00000111_11111111;
                 return self.ram[mirror_down_address as usize];
             }
-            0x2000 => panic!("Control register is write-only!"),
-            0x2001 => panic!("Mask register is write-only!"),
-            0x2002 => self.ppu.borrow().read_status(),
-            0x2003 => todo!("OAMADDR register is not implemented yet!"),
-            0x2004 => todo!("OAMDATA register is not implemented yet!"),
-            0x2005 => panic!("Scroll register is write-only!"),
-            0x2006 => panic!("Address register is write-only!"),
-            0x2007 => self.ppu.borrow_mut().read_data(),
+            PPU_REGISTERS_START..=PPU_REGISTERS_MIRRORS_END => {
+                let mirror_down_address = address & 0b00100000_00000111;
+                match mirror_down_address {
+                    0x2000 => panic!("Control register is write-only!"),
+                    0x2001 => panic!("Mask register is write-only!"),
+                    0x2002 => self.ppu.borrow_mut().read_status(),
+                    0x2003 => todo!("OAMADDR register is not implemented yet!"),
+                    0x2004 => panic!("OAMDATA register is not implemented yet!"),
+                    0x2005 => panic!("Scroll register is write-only!"),
+                    0x2006 => panic!("Address register is write-only!"),
+                    0x2007 => self.ppu.borrow_mut().read_data(),
+                    _ => panic!("Impossible"),
+                }
+            }
+            0x4000..=0x4017 => {
+                println!(
+                    "Ignoring write to {}, APU and IO are not implemented yet, returning 0",
+                    address
+                );
+                return 0;
+            }
             ROM_START..=ROM_END => self.rom.prg_rom[self.calculate_rom_address(address) as usize],
-            _ => panic!("Can't read address {}", address),
+            _ => panic!("Can't read address {:0x}", address),
         }
     }
 
     fn write_u8(&mut self, address: u16, data: u8) {
         match address {
             RAM_START..=RAM_MIRRORS_END => {
-                self.ram[address as usize] = data;
+                let mirror_down_address = address & 0b00000111_11111111;
+                self.ram[mirror_down_address as usize] = data;
             }
-            0x2000 => self.ppu.borrow_mut().write_control(data),
-            0x2001 => self.ppu.borrow_mut().write_mask(data),
-            0x2002 => panic!("Status register is read-only!"),
-            0x2003 => todo!("OAMADDR register is not implemented yet!"),
-            0x2004 => todo!("OAMDATA register is not implemented yet!"),
-            0x2005 => panic!("Scroll register is not implemented yet!"),
-            0x2006 => self.ppu.borrow_mut().write_address(data),
-            0x2007 => self.ppu.borrow_mut().write_data(data),
-
-            0x4016..=0x4017 => {
-                println!("Joypads not implemented yet")
+            PPU_REGISTERS_START..=PPU_REGISTERS_MIRRORS_END => {
+                let mirror_down_address = address & 0b00100000_00000111;
+                match mirror_down_address {
+                    0x2000 => self.ppu.borrow_mut().write_control(data),
+                    0x2001 => self.ppu.borrow_mut().write_mask(data),
+                    0x2002 => panic!("Status register is read-only!"),
+                    0x2003 => println!("OAMADDR register is not implemented yet!"),
+                    0x2004 => println!("OAMDATA register is not implemented yet!"),
+                    0x2005 => println!("Scroll register is not implemented yet!"),
+                    0x2006 => self.ppu.borrow_mut().write_address(data),
+                    0x2007 => self.ppu.borrow_mut().write_data(data),
+                    _ => panic!("Impossible!"),
+                }
+            }
+            0x4000..=0x4017 => {
+                println!(
+                    "Ignoring write to {}, APU and IO are not implemented yet",
+                    address
+                );
             }
             _ => println!(
                 "Attempt to write read-only memory at address {:0x}",
@@ -84,8 +114,9 @@ impl Memory for BasicMapper {
     fn read_u16(&self, address: u16) -> u16 {
         match address {
             RAM_START..=RAM_MIRRORS_END => {
-                let low_order_address = address;
-                let high_order_address = address.wrapping_add(1);
+                let mirror_down_address = address & 0b00000111_11111111;
+                let low_order_address = mirror_down_address;
+                let high_order_address = mirror_down_address.wrapping_add(1);
                 return u16::from_le_bytes([
                     self.ram[low_order_address as usize],
                     self.ram[high_order_address as usize],
@@ -104,7 +135,7 @@ impl Memory for BasicMapper {
                     self.rom.prg_rom[high_order_address as usize],
                 ]);
             }
-            _ => panic!("Can't read address {}", address),
+            _ => panic!("Can't read address {:0x}", address),
         }
     }
 
@@ -120,8 +151,9 @@ impl Memory for BasicMapper {
     fn write_u16(&mut self, address: u16, data: u16) {
         match address {
             RAM_START..=RAM_MIRRORS_END => {
+                let mirror_down_address = address & 0b00000111_11111111;
                 let bytes = data.to_le_bytes();
-                let index = address as usize;
+                let index = mirror_down_address as usize;
                 self.ram[index] = bytes[0];
                 self.ram[index + 1] = bytes[1];
             }

@@ -39,6 +39,9 @@ impl TryFrom<&Vec<u8>> for Rom {
 
         let mapper = (raw[7] & 0b1111_0000) | (raw[6] >> 4);
 
+        if mapper != 0 {
+            panic!("Alternative mappers are not implemented!");
+        }
         let ines_version = (raw[7] >> 2) & 0b11;
 
         if ines_version != 0 {
@@ -58,7 +61,7 @@ impl TryFrom<&Vec<u8>> for Rom {
         const PRG_ROM_PAGE_BYTES: usize = 16384;
         let prg_rom_size = raw[4] as usize * PRG_ROM_PAGE_BYTES;
         println!("prg rom size: {}", prg_rom_size);
-
+        println!("Mapper: {}", mapper);
         const CHR_ROM_PAGE_BYTES: usize = 8192;
         let chr_rom_size = raw[5] as usize * CHR_ROM_PAGE_BYTES;
 

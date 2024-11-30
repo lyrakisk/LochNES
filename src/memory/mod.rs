@@ -8,4 +8,8 @@ pub trait Memory {
     fn zero_page_read_u16(&self, address: u8) -> u16;
 
     fn write_u16(&mut self, address: u16, data: u16) -> ();
+
+    fn nmi_occured(&self) -> bool {
+        return false;
+    }
 }

@@ -15,10 +15,10 @@ impl Control {
             1 => 0x2400,
             2 => 0x2800,
             3 => 0x2c00,
-            _ => panic!("Not possible")
+            _ => panic!("Not possible"),
         }
     }
-    
+
     pub fn vram_increment(&self) -> u16 {
         if (self.value & 0b0000_0100) >> 2 == 0 {
             return 1;
@@ -28,7 +28,7 @@ impl Control {
     }
 
     pub fn nmi_enable(&self) -> bool {
-        return (self.value & 0b1000_0000) >> 7 == 1
+        return (self.value & 0b1000_0000) >> 7 == 1;
     }
 }
 
@@ -41,4 +41,3 @@ impl Register8 for Control {
         self.value = data;
     }
 }
-

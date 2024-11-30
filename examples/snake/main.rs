@@ -38,7 +38,7 @@ fn main() {
 
     let rom_bytes = read(PathBuf::from("examples/snake/snake.nes")).unwrap();
     let rom = Rom::try_from(&rom_bytes).unwrap();
-    let ppu = Rc::new(RefCell::new(PPU::new()));
+    let ppu = Rc::new(RefCell::new(PPU::new(vec![])));
     let cpu_mapper = Rc::new(RefCell::new(BasicMapper::new(rom.clone(), ppu.clone())));
     let mut cpu = CPU::new(cpu_mapper.clone());
 

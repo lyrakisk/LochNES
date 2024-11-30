@@ -18,6 +18,7 @@ pub struct InstructionResult {
 
 impl Instruction {
     pub fn execute(&self, cpu: &mut CPU) -> InstructionResult {
+        // println!("instruction {}, PC {}", self.name, cpu.program_counter);
         match self.name {
             "AAC" => aac(self, cpu),
             "ADC" => adc(self, cpu),

@@ -42,7 +42,7 @@ fn main() {
     println!("prg rom len: {}", rom.prg_rom.len());
     println!("chr rom len: {}", rom.chr_rom.len());
 
-    let ppu = Rc::new(RefCell::new(PPU::new()));
+    let ppu = Rc::new(RefCell::new(PPU::new(rom.chr_rom.clone())));
     let cpu_mapper = Rc::new(RefCell::new(BasicMapper::new(rom, ppu.clone())));
     let mut cpu = CPU::new(cpu_mapper.clone());
 
@@ -53,7 +53,7 @@ fn main() {
         handle_user_input(cpu_mapper.clone(), &mut event_pump);
         // cpu_mapper.borrow_mut().write_u8(0xfe, rng.gen_range(1, 16));
 
-        if total_cycles % 3410 == 0 {
+        if total_cycles % 341 == 0 {
             // println!("cpu total: {}, ppu: {}, scanline: {}",total_cycles, ppu.borrow().cycles, ppu.borrow().scanline);
             texture
                 .update(None, &ppu.borrow().frame.bytes, 256 * 3)

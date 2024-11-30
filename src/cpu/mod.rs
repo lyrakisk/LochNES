@@ -70,6 +70,10 @@ impl CPU {
     }
 
     pub fn execute_next_instruction(&mut self) -> InstructionResult {
+        let mut instruction_result = InstructionResult { executed_cycles: 0 };
+        instruction_result.executed_cycles += self.handle_nmi_interrupt();
+        println!("PC: {:0x}", self.program_counter);
+
         let opcode = self.fetch();
 
         let decoded_opcode = self.decode(opcode);
@@ -77,10 +81,28 @@ impl CPU {
         match decoded_opcode {
             None => panic!("Could not decode opcode 0x{:02x}", opcode),
             Some(instruction) => {
-                let instruction_result = instruction.execute(self);
+                instruction_result.executed_cycles = instruction.execute(self).executed_cycles;
                 self.update_program_counter(instruction);
+
                 return instruction_result;
             }
+        }
+    }
+
+    pub fn handle_nmi_interrupt(&mut self) -> u8 {
+        if self.mapper.borrow().nmi_occured() {
+            let interrupt_vector = self.mapper.borrow().read_u16(0xFFFA);
+            self.stack_push_u16(self.program_counter);
+
+            self.stack_push(self.status | 0b0001_0000);
+            self.set_flag(STATUS_FLAG_INTERRUPT_DISABLE);
+
+            self.program_counter = interrupt_vector;
+            println!("NMI occurred, setting PC to: {:0x}", self.program_counter);
+            // todo: check if this is the correct number of cycles
+            return 2;
+        } else {
+            return 0;
         }
     }
 
