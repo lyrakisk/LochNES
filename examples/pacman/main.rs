@@ -6,7 +6,6 @@ use LochNES::rom::*;
 
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
-use sdl2::pixels::Color;
 use sdl2::pixels::PixelFormatEnum;
 use sdl2::EventPump;
 
@@ -34,8 +33,6 @@ fn main() {
         .create_texture_target(PixelFormatEnum::RGB24, 256, 240)
         .unwrap();
 
-    let mut rng = rand::thread_rng();
-
     let rom_bytes = read(PathBuf::from("examples/pacman/pacman.nes")).unwrap();
     let rom = Rom::try_from(&rom_bytes).unwrap();
     println!("prg rom len: {}", rom.prg_rom.len());
@@ -49,10 +46,8 @@ fn main() {
     let mut total_cycles: usize = 0;
     loop {
         handle_user_input(cpu_mapper.clone(), &mut event_pump);
-        // cpu_mapper.borrow_mut().write_u8(0xfe, rng.gen_range(1, 16));
 
-        if total_cycles % 341 == 0 {
-            // println!("cpu total: {}, ppu: {}, scanline: {}",total_cycles, ppu.borrow().cycles, ppu.borrow().scanline);
+        if total_cycles % 3410 == 0 {
             texture
                 .update(None, &ppu.borrow().frame.bytes, 256 * 3)
                 .unwrap();
@@ -60,8 +55,6 @@ fn main() {
             canvas.present();
         }
 
-        // ::std::thread::sleep(std::time::Duration::new(0, 20_000));
-        // need to implement joypads
         let instruction_result = cpu.execute_next_instruction();
 
         for _ in 0..instruction_result.executed_cycles {
@@ -71,6 +64,7 @@ fn main() {
         total_cycles += instruction_result.executed_cycles as usize;
     }
 }
+
 fn handle_user_input(mapper: Rc<RefCell<BasicMapper>>, event_pump: &mut EventPump) {
     for event in event_pump.poll_iter() {
         match event {
@@ -105,19 +99,5 @@ fn handle_user_input(mapper: Rc<RefCell<BasicMapper>>, event_pump: &mut EventPum
             }
             _ => { /* do nothing */ }
         }
-    }
-}
-
-fn color(byte: u8) -> Color {
-    match byte {
-        0 => sdl2::pixels::Color::BLACK,
-        1 => sdl2::pixels::Color::WHITE,
-        2 | 9 => sdl2::pixels::Color::GREY,
-        3 | 10 => sdl2::pixels::Color::RED,
-        4 | 11 => sdl2::pixels::Color::GREEN,
-        5 | 12 => sdl2::pixels::Color::BLUE,
-        6 | 13 => sdl2::pixels::Color::MAGENTA,
-        7 | 14 => sdl2::pixels::Color::YELLOW,
-        _ => sdl2::pixels::Color::CYAN,
     }
 }
