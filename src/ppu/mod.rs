@@ -155,41 +155,35 @@ impl PPU {
     pub fn tick(&mut self) {
         // println!("Control {:08b}", self.control.read_u8());
         // println!("cycle: {}, scanline: {}", self.cycles, self.scanline);
-        match self.scanline {
-            0..=239 => match self.cycles {
-                0 => (),
-                1..=256 => {
+        self.cycles += 1;
+        match self.cycles {
+            0 => (),
+            1..=256 => {
+                if self.scanline < 240 {
                     self.render_pixel(self.cycles - 1, self.scanline);
                 }
-                257..=340 => (),
-                _ => {
-                    self.cycles = self.cycles - 341;
-                    self.scanline += 1;
-                }
-            },
-            240 => self.scanline += 1,
-            241 => {
-                println!("Scanline 241");
-                self.status.set_v_blank();
-                self.scanline += 1;
-                if self.control.nmi_enable() {
-                    println!("nmi triggered, from scanline 241");
-                    self.nmi_triggered = true;
-                }
             }
-            242..=260 => self.scanline += 1,
-            261 => {
-                self.status.clear_v_blank();
-                self.scanline += 1;
-            }
+            257..=340 => (),
             _ => {
-                self.scanline = 0;
-                if self.nmi_triggered {
-                    self.nmi_triggered = false;
+                self.cycles = self.cycles - 341;
+                self.scanline += 1;
+
+                if self.scanline == 241 {
+                    self.status.set_v_blank();
+                    self.scanline += 1;
+                    if self.control.nmi_enable() {
+                        println!("nmi triggered, from scanline 241");
+                        self.nmi_triggered = true;
+                    }
+                }
+
+                if self.scanline == 261 {
+                    {
+                        self.scanline = 0;
+                    }
                 }
             }
         }
-        self.cycles += 1;
     }
 
     fn render_pixel(&mut self, x: u16, y: u16) {
@@ -199,10 +193,9 @@ impl PPU {
         let nametable_index = nametable_base + nametable_x + nametable_y * 32;
         assert!(nametable_index - nametable_base < 0x400);
         let nametable_byte = self.mem_read_u8(nametable_index);
-        let pixel_value = self.mem_read_u8(nametable_byte as u16);
         println!("Render pixel (x: {}, y: {}, n_x: {}, n_y: {}, n_base: {:0x}, n_index: {:0x},  n_byte: {})", x, y, nametable_x, nametable_y, nametable_base, nametable_index, nametable_byte);
 
-        let rgb: (u8, u8, u8) = (0, 0, pixel_value);
+        let rgb: (u8, u8, u8) = (nametable_byte, nametable_byte, nametable_byte);
         // let rgb = (rand::random(), rand::random(), rand::random());
         self.frame.set_pixel(x as usize, y as usize, rgb);
     }
