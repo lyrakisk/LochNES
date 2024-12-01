@@ -27,6 +27,10 @@ impl Control {
         }
     }
 
+    pub fn background_pattern_table_address(&self) -> u8 {
+        return self.value & 0b0001_0000 >> 4;
+    }
+
     pub fn nmi_enable(&self) -> bool {
         return (self.value & 0b1000_0000) >> 7 == 1;
     }

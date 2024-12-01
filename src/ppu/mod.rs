@@ -115,7 +115,8 @@ impl PPU {
 
     fn mem_read_u8(&self, address: u16) -> u8 {
         match address {
-            0x0000..=0x1FFF => self.chr[address as usize], // todo: use bank
+            0x0000..=0x1FFF => self.chr[address as usize],
+            // todo: get nametable mirroring from cartrige, for now we assume it's vertical
             0x2000..=0x2FFF => self.vram[(address & 0b10011111111111 - 0x2000) as usize],
             0x3000..=0x3EFF => panic!("Can't access address {}", address),
             0x3F00..=0x3F1F => self.pallete_ram[(address - 0x3f00) as usize],
@@ -132,8 +133,8 @@ impl PPU {
 
     fn mem_write_u8(&mut self, address: u16, data: u8) {
         match address {
-            0x000..=0x0FFF => panic!("CHR Rom is read-only."),
-            // todo: get mirroring from cartrige, for now we assume it's vertical
+            0x000..=0x1FFF => panic!("CHR Rom is read-only."),
+            // todo: get nametable mirroring from cartrige, for now we assume it's vertical
             0x2000..=0x2FFF => self.vram[(address & 0b10011111111111 - 0x2000) as usize] = data,
             0x3000..=0x3EFF => panic!("Can't access address {}", address),
             0x3F00..=0x3F1F => self.pallete_ram[(address - 0x3f00) as usize] = data,
@@ -187,16 +188,36 @@ impl PPU {
     }
 
     fn render_pixel(&mut self, x: u16, y: u16) {
+        let bank = (self.control.background_pattern_table_address() as u16) * 1000;
+        println!("bank: {}", bank);
+        assert!(bank == 0 || bank == 1000);
         let nametable_x = x / 8;
         let nametable_y = y / 8;
         let nametable_base = self.control.nametable_base();
         let nametable_index = nametable_base + nametable_x + nametable_y * 32;
         assert!(nametable_index - nametable_base < 0x400);
-        let nametable_byte = self.mem_read_u8(nametable_index);
-        println!("Render pixel (x: {}, y: {}, n_x: {}, n_y: {}, n_base: {:0x}, n_index: {:0x},  n_byte: {})", x, y, nametable_x, nametable_y, nametable_base, nametable_index, nametable_byte);
+        let nametable_byte = self.mem_read_u8(nametable_index) as u16;
+        println!("Render pixel (x: {}, y: {}, bank: {}, n_x: {}, n_y: {}, n_base: {:0x}, n_index: {:0x},  n_byte: {})", x, y, bank, nametable_x, nametable_y, nametable_base, nametable_index, nametable_byte);
 
-        let rgb: (u8, u8, u8) = (nametable_byte, nametable_byte, nametable_byte);
-        // let rgb = (rand::random(), rand::random(), rand::random());
+        let tile = &self.chr
+            [(bank + nametable_byte * 16) as usize..=(bank + nametable_byte * 16 + 15) as usize];
+        let shift = vec![7, 6, 5, 4, 3, 2, 1, 0];
+
+        let mut upper = tile[(y % 8) as usize];
+        let mut lower = tile[((y % 8) + 8) as usize];
+
+        upper = upper >> (shift[(x % 8) as usize]);
+        lower = lower >> (shift[(x % 8) as usize]);
+
+        let value = (1 & upper) << 1 | (1 & lower);
+        let rgb = match value {
+            0 => SYSTEM_PALLETE[0x01],
+            1 => SYSTEM_PALLETE[0x23],
+            2 => SYSTEM_PALLETE[0x27],
+            3 => SYSTEM_PALLETE[0x30],
+            _ => panic!("can't be"),
+        };
+
         self.frame.set_pixel(x as usize, y as usize, rgb);
     }
 }
