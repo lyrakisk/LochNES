@@ -209,7 +209,7 @@ impl PPU {
         upper = upper >> (shift[(x % 8) as usize]);
         lower = lower >> (shift[(x % 8) as usize]);
 
-        let value = (1 & upper) << 1 | (1 & lower);
+        let value = (1 & upper) << 1 | (1 & lower); 
         let rgb = match value {
             0 => SYSTEM_PALLETE[0x01],
             1 => SYSTEM_PALLETE[0x23],
