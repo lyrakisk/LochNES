@@ -68,7 +68,7 @@ impl Memory for BasicMapper {
             }
             0x4000..=0x4017 => {
                 println!(
-                    "Ignoring write to {}, APU and IO are not implemented yet, returning 0",
+                    "Ignoring read from {:0x}, APU and IO are not implemented yet, returning 0",
                     address
                 );
                 return 0;
@@ -100,7 +100,7 @@ impl Memory for BasicMapper {
             }
             0x4000..=0x4017 => {
                 println!(
-                    "Ignoring write to {}, APU and IO are not implemented yet",
+                    "Ignoring write to {:0x}, APU and IO are not implemented yet",
                     address
                 );
             }

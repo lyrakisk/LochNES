@@ -77,7 +77,7 @@ impl PPU {
         self.control.write_u8(data);
         let next_nmi_enable = self.control.nmi_enable();
         if !current_nmi_enable && next_nmi_enable && self.status.is_in_v_blank() {
-            println!("nmi triggered by writing to control register");
+            // println!("nmi triggered by writing to control register");
             self.nmi_triggered = true;
         }
     }
@@ -126,7 +126,7 @@ impl PPU {
     }
 
     pub fn write_data(&mut self, data: u8) {
-        println!("Write {} to address {:0x}", data, self.address.read_u16());
+        // println!("Write {} to address {:0x}", data, self.address.read_u16());
         self.mem_write_u8(self.address.read_u16(), data);
         self.increment_address();
     }
@@ -173,7 +173,7 @@ impl PPU {
                     self.status.set_v_blank();
                     self.scanline += 1;
                     if self.control.nmi_enable() {
-                        println!("nmi triggered, from scanline 241");
+                        // println!("nmi triggered, from scanline 241");
                         self.nmi_triggered = true;
                     }
                 }
@@ -189,7 +189,7 @@ impl PPU {
 
     fn render_pixel(&mut self, x: u16, y: u16) {
         let bank = (self.control.background_pattern_table_address() as u16) * 1000;
-        println!("bank: {}", bank);
+        // println!("bank: {}", bank);
         assert!(bank == 0 || bank == 1000);
         let nametable_x = x / 8;
         let nametable_y = y / 8;
@@ -197,7 +197,7 @@ impl PPU {
         let nametable_index = nametable_base + nametable_x + nametable_y * 32;
         assert!(nametable_index - nametable_base < 0x400);
         let nametable_byte = self.mem_read_u8(nametable_index) as u16;
-        println!("Render pixel (x: {}, y: {}, bank: {}, n_x: {}, n_y: {}, n_base: {:0x}, n_index: {:0x},  n_byte: {})", x, y, bank, nametable_x, nametable_y, nametable_base, nametable_index, nametable_byte);
+        // println!("Render pixel (x: {}, y: {}, bank: {}, n_x: {}, n_y: {}, n_base: {:0x}, n_index: {:0x},  n_byte: {})", x, y, bank, nametable_x, nametable_y, nametable_base, nametable_index, nametable_byte);
 
         let tile = &self.chr
             [(bank + nametable_byte * 16) as usize..=(bank + nametable_byte * 16 + 15) as usize];
@@ -209,7 +209,7 @@ impl PPU {
         upper = upper >> (shift[(x % 8) as usize]);
         lower = lower >> (shift[(x % 8) as usize]);
 
-        let value = (1 & upper) << 1 | (1 & lower); 
+        let value = (1 & upper) << 1 | (1 & lower);
         let rgb = match value {
             0 => SYSTEM_PALLETE[0x01],
             1 => SYSTEM_PALLETE[0x23],

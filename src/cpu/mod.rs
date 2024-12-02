@@ -72,7 +72,7 @@ impl CPU {
     pub fn execute_next_instruction(&mut self) -> InstructionResult {
         let mut instruction_result = InstructionResult { executed_cycles: 0 };
         instruction_result.executed_cycles += self.handle_nmi_interrupt();
-        println!("PC: {:0x}", self.program_counter);
+        // println!("PC: {:0x}", self.program_counter);
 
         let opcode = self.fetch();
 
@@ -98,7 +98,7 @@ impl CPU {
             self.set_flag(STATUS_FLAG_INTERRUPT_DISABLE);
 
             self.program_counter = interrupt_vector;
-            println!("NMI occurred, setting PC to: {:0x}", self.program_counter);
+            // println!("NMI occurred, setting PC to: {:0x}", self.program_counter);
             // todo: check if this is the correct number of cycles
             return 2;
         } else {
