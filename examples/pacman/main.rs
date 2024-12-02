@@ -47,7 +47,7 @@ fn main() {
     loop {
         handle_user_input(cpu_mapper.clone(), &mut event_pump);
 
-        if total_cycles % 3410 == 0 {
+        if total_cycles % 34100 == 0 {
             texture
                 .update(None, &ppu.borrow().frame.bytes, 256 * 3)
                 .unwrap();
