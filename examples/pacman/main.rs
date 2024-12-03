@@ -1,8 +1,7 @@
 use LochNES::cpu::mappers::basic_mapper::*;
-use LochNES::cpu::*;
-use LochNES::memory::Memory;
 use LochNES::ppu::PPU;
 use LochNES::rom::*;
+use LochNES::{controller::*, cpu::*};
 
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
@@ -41,13 +40,15 @@ fn main() {
     let cpu_mapper = Rc::new(RefCell::new(BasicMapper::new(rom, ppu.clone())));
     let mut cpu = CPU::new(cpu_mapper.clone());
 
+    let controller = Rc::new(RefCell::new(Controller::new()));
+
     cpu.reset();
 
     let mut total_cycles: usize = 0;
     loop {
-        handle_user_input(cpu_mapper.clone(), &mut event_pump);
+        handle_user_input(controller.clone(), &mut event_pump);
 
-        if total_cycles % 34100 == 0 {
+        if total_cycles % 341 == 0 {
             texture
                 .update(None, &ppu.borrow().frame.bytes, 256 * 3)
                 .unwrap();
@@ -65,7 +66,7 @@ fn main() {
     }
 }
 
-fn handle_user_input(mapper: Rc<RefCell<BasicMapper>>, event_pump: &mut EventPump) {
+fn handle_user_input(controller: Rc<RefCell<Controller>>, event_pump: &mut EventPump) {
     for event in event_pump.poll_iter() {
         match event {
             Event::Quit { .. }
@@ -74,28 +75,100 @@ fn handle_user_input(mapper: Rc<RefCell<BasicMapper>>, event_pump: &mut EventPum
                 ..
             } => std::process::exit(0),
             Event::KeyDown {
-                keycode: Some(Keycode::W),
+                keycode: Some(Keycode::Down),
                 ..
             } => {
-                mapper.borrow_mut().write_u8(0xff, 0x77);
+                controller.borrow_mut().press_button(Controller::DOWN);
+            }
+            Event::KeyUp {
+                keycode: Some(Keycode::Down),
+                ..
+            } => {
+                controller.borrow_mut().release_button(Controller::DOWN);
             }
             Event::KeyDown {
-                keycode: Some(Keycode::S),
+                keycode: Some(Keycode::Up),
                 ..
             } => {
-                mapper.borrow_mut().write_u8(0xff, 0x73);
+                controller.borrow_mut().press_button(Controller::UP);
+            }
+            Event::KeyUp {
+                keycode: Some(Keycode::Up),
+                ..
+            } => {
+                controller.borrow_mut().release_button(Controller::UP);
+            }
+            Event::KeyDown {
+                keycode: Some(Keycode::Left),
+                ..
+            } => {
+                controller.borrow_mut().press_button(Controller::LEFT);
+            }
+            Event::KeyUp {
+                keycode: Some(Keycode::Left),
+                ..
+            } => {
+                controller.borrow_mut().release_button(Controller::LEFT);
+            }
+            Event::KeyDown {
+                keycode: Some(Keycode::Right),
+                ..
+            } => {
+                controller.borrow_mut().press_button(Controller::RIGHT);
+            }
+            Event::KeyUp {
+                keycode: Some(Keycode::Right),
+                ..
+            } => {
+                controller.borrow_mut().release_button(Controller::RIGHT);
             }
             Event::KeyDown {
                 keycode: Some(Keycode::A),
                 ..
             } => {
-                mapper.borrow_mut().write_u8(0xff, 0x61);
+                controller.borrow_mut().press_button(Controller::BUTTON_A);
             }
-            Event::KeyDown {
-                keycode: Some(Keycode::D),
+            Event::KeyUp {
+                keycode: Some(Keycode::A),
                 ..
             } => {
-                mapper.borrow_mut().write_u8(0xff, 0x64);
+                controller.borrow_mut().release_button(Controller::BUTTON_A);
+            }
+            Event::KeyDown {
+                keycode: Some(Keycode::S),
+                ..
+            } => {
+                controller.borrow_mut().press_button(Controller::BUTTON_B);
+            }
+            Event::KeyUp {
+                keycode: Some(Keycode::S),
+                ..
+            } => {
+                controller.borrow_mut().release_button(Controller::BUTTON_B);
+            }
+            Event::KeyDown {
+                keycode: Some(Keycode::Z),
+                ..
+            } => {
+                controller.borrow_mut().press_button(Controller::SELECT);
+            }
+            Event::KeyUp {
+                keycode: Some(Keycode::Z),
+                ..
+            } => {
+                controller.borrow_mut().release_button(Controller::SELECT);
+            }
+            Event::KeyDown {
+                keycode: Some(Keycode::X),
+                ..
+            } => {
+                controller.borrow_mut().press_button(Controller::START);
+            }
+            Event::KeyUp {
+                keycode: Some(Keycode::X),
+                ..
+            } => {
+                controller.borrow_mut().release_button(Controller::START);
             }
             _ => { /* do nothing */ }
         }
