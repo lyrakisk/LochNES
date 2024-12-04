@@ -2,9 +2,11 @@ use core::panic;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+
 use crate::memory::*;
 use crate::ppu::PPU;
 use crate::rom::*;
+use crate::controller::*;
 
 const RAM_START: u16 = 0x0000;
 const RAM_MIRRORS_END: u16 = 0x1FFF;
@@ -16,14 +18,16 @@ pub struct BasicMapper {
     ram: [u8; 2048],
     rom: Rom,
     ppu: Rc<RefCell<PPU>>,
+    controller: Rc<RefCell<Controller>>,
 }
 
 impl BasicMapper {
-    pub fn new(rom: Rom, ppu: Rc<RefCell<PPU>>) -> Self {
+    pub fn new(rom: Rom, ppu: Rc<RefCell<PPU>>, controller: Rc<RefCell<Controller>>) -> Self {
         BasicMapper {
             ram: [0; 2048],
             rom: rom,
             ppu: ppu,
+            controller: controller,
         }
     }
 
@@ -66,13 +70,14 @@ impl Memory for BasicMapper {
                     _ => panic!("Impossible"),
                 }
             }
-            0x4000..=0x4017 => {
+            0x4000..=0x4015 | 0x4017 => {
                 println!(
                     "Ignoring read from {:0x}, APU and IO are not implemented yet, returning 0",
                     address
                 );
                 return 0;
             }
+            0x4016 => self.controller.borrow_mut().read_u8(),
             ROM_START..=ROM_END => self.rom.prg_rom[self.calculate_rom_address(address) as usize],
             _ => panic!("Can't read address {:0x}", address),
         }
@@ -98,11 +103,14 @@ impl Memory for BasicMapper {
                     _ => panic!("Impossible!"),
                 }
             }
-            0x4000..=0x4017 => {
+            0x4000..=0x4015 | 0x4017 => {
                 println!(
                     "Ignoring write to {:0x}, APU and IO are not implemented yet",
                     address
                 );
+            }
+            0x4016 => {
+                self.controller.borrow_mut().write(data);
             }
             _ => println!(
                 "Attempt to write read-only memory at address {:0x}",

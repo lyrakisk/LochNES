@@ -15,8 +15,8 @@ enum StrobeMode {
 
 #[derive(PartialEq, Debug)]
 enum ButtonState {
-    PRESSED,
-    RELEASED,
+    RELEASED = 0,
+    PRESSED = 1,
 }
 
 pub struct Controller {
@@ -42,10 +42,32 @@ impl Controller {
         };
     }
 
-    pub fn read(&mut self) -> ButtonState {
+    pub fn read_u8(&mut self) -> u8 {
+        return self.read() as u8;
+    }
+
+    pub fn write(&mut self, data: u8) {
+        assert!(data == 0 || data == 1);
+
+        if data == 0 {
+            self.strobe_mode = StrobeMode::OFF;
+        } else {
+            self.strobe_mode = StrobeMode::ON;
+            self.index = 0;
+        }
+    }
+    fn read(&mut self) -> ButtonState {
+        if self.index > 7 {
+            return ButtonState::PRESSED
+        }
         let result = match self.strobe_mode {
             StrobeMode::ON => self.status & BUTTON_A,
-            _ => 0,
+            StrobeMode::OFF => {
+                let mut mask = 1;
+                mask = mask << self.index;
+                self.index += 1;
+                self.status & mask
+            },
         };
 
         if result == 0 {
@@ -63,9 +85,6 @@ impl Controller {
         self.status = self.status & (!button);
     }
 
-    pub fn write(&mut self) {
-        todo!();
-    }
 }
 
 #[cfg(test)]
@@ -92,4 +111,14 @@ mod test_controller {
 
     #[test]
     fn test_read_when_strobe_mode_is_off() {}
+
+    #[test]
+    fn test_read_u8_when_strobe_mode_is_off() {}
+
+    #[test]
+    fn test_read_u8_when_strobe_mode_is_on() {}
+
+    #[test]
+    fn test_write() {}
+    
 }

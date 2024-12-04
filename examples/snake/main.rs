@@ -1,4 +1,5 @@
 use rand::Rng;
+use LochNES::controller::Controller;
 use LochNES::cpu::mappers::basic_mapper::*;
 use LochNES::cpu::*;
 use LochNES::memory::Memory;
@@ -39,7 +40,8 @@ fn main() {
     let rom_bytes = read(PathBuf::from("examples/snake/snake.nes")).unwrap();
     let rom = Rom::try_from(&rom_bytes).unwrap();
     let ppu = Rc::new(RefCell::new(PPU::new(vec![])));
-    let cpu_mapper = Rc::new(RefCell::new(BasicMapper::new(rom.clone(), ppu.clone())));
+    let controller = Rc::new(RefCell::new(Controller::new()));
+    let cpu_mapper = Rc::new(RefCell::new(BasicMapper::new(rom.clone(), ppu.clone(), controller)));
     let mut cpu = CPU::new(cpu_mapper.clone());
 
     println!("rom len: {}", rom.prg_rom.len());
