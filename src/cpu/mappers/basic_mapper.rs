@@ -2,11 +2,10 @@ use core::panic;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-
+use crate::controller::*;
 use crate::memory::*;
 use crate::ppu::PPU;
 use crate::rom::*;
-use crate::controller::*;
 
 const RAM_START: u16 = 0x0000;
 const RAM_MIRRORS_END: u16 = 0x1FFF;
@@ -62,7 +61,7 @@ impl Memory for BasicMapper {
                     0x2000 => panic!("Control register is write-only!"),
                     0x2001 => panic!("Mask register is write-only!"),
                     0x2002 => self.ppu.borrow_mut().read_status(),
-                    0x2003 => todo!("OAMADDR register is not implemented yet!"),
+                    0x2003 => panic!("OAMADDR register is write only!"),
                     0x2004 => panic!("OAMDATA register is not implemented yet!"),
                     0x2005 => panic!("Scroll register is write-only!"),
                     0x2006 => panic!("Address register is write-only!"),
@@ -95,7 +94,7 @@ impl Memory for BasicMapper {
                     0x2000 => self.ppu.borrow_mut().write_control(data),
                     0x2001 => self.ppu.borrow_mut().write_mask(data),
                     0x2002 => panic!("Status register is read-only!"),
-                    0x2003 => println!("OAMADDR register is not implemented yet!"),
+                    0x2003 => self.ppu.borrow_mut().write_oam_address(data),
                     0x2004 => println!("OAMDATA register is not implemented yet!"),
                     0x2005 => println!("Scroll register is not implemented yet!"),
                     0x2006 => self.ppu.borrow_mut().write_address(data),

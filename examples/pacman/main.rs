@@ -37,9 +37,13 @@ fn main() {
     println!("prg rom len: {}", rom.prg_rom.len());
     println!("chr rom len: {}", rom.chr_rom.len());
     let ppu = Rc::new(RefCell::new(PPU::new(rom.chr_rom.clone())));
-    
+
     let controller = Rc::new(RefCell::new(Controller::new()));
-    let cpu_mapper = Rc::new(RefCell::new(BasicMapper::new(rom, ppu.clone(), controller.clone())));
+    let cpu_mapper = Rc::new(RefCell::new(BasicMapper::new(
+        rom,
+        ppu.clone(),
+        controller.clone(),
+    )));
     let mut cpu = CPU::new(cpu_mapper.clone());
 
     cpu.reset();

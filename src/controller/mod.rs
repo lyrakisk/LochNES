@@ -58,7 +58,7 @@ impl Controller {
     }
     fn read(&mut self) -> ButtonState {
         if self.index > 7 {
-            return ButtonState::PRESSED
+            return ButtonState::PRESSED;
         }
         let result = match self.strobe_mode {
             StrobeMode::ON => self.status & BUTTON_A,
@@ -67,7 +67,7 @@ impl Controller {
                 mask = mask << self.index;
                 self.index += 1;
                 self.status & mask
-            },
+            }
         };
 
         if result == 0 {
@@ -84,7 +84,6 @@ impl Controller {
     pub fn release_button(&mut self, button: u8) {
         self.status = self.status & (!button);
     }
-
 }
 
 #[cfg(test)]
@@ -120,5 +119,4 @@ mod test_controller {
 
     #[test]
     fn test_write() {}
-    
 }

@@ -6,12 +6,13 @@ use registers::data::Data;
 use registers::write_toggle::WriteToggle;
 use registers::{Register16, Register8};
 
-use crate::ppu::frame::Frame;
-use crate::ppu::registers::address::Address;
-use crate::ppu::registers::control::Control;
-use crate::ppu::registers::mask::Mask;
-use crate::ppu::registers::status::Status;
+use frame::Frame;
+use registers::address::Address;
+use registers::control::Control;
+use registers::mask::Mask;
+use registers::status::Status;
 
+use registers::oam_address::OAMAddress;
 #[rustfmt::skip]
 pub static SYSTEM_PALLETE: [(u8,u8,u8); 64] = [
    (0x80, 0x80, 0x80), (0x00, 0x3D, 0xA6), (0x00, 0x12, 0xB0), (0x44, 0x00, 0x96), (0xA1, 0x00, 0x5E),
@@ -33,13 +34,14 @@ pub struct PPU {
     control: Control,
     mask: Mask,
     status: Status,
-    oamaddr: u16,
+    oamaddr: OAMAddress,
     oamdata: u16,
     ppuscroll: u16,
     address: Address,
     data: Data,
     pub frame: Frame,
     pub vram: [u8; 2048],
+    oam_ram: [u8; 256],
     pallete_ram: [u8; 32],
     w: WriteToggle,
     pub cycles: u16,
@@ -55,13 +57,14 @@ impl PPU {
             control: Control::new(0b0000_0000),
             mask: Mask::new(0b0000_0000),
             status: Status::new(0b1010_0000),
-            oamaddr: 0b0000_0000,
+            oamaddr: OAMAddress::new(0b0000_0000),
             oamdata: 0b0000_0000,
             ppuscroll: 0b0000_0000,
             address: Address::new(0x0000),
             data: Data::new(0b0000_0000),
             frame: Frame::new(),
             vram: [0; 2048],
+            oam_ram: [0; 256],
             pallete_ram: [0; 32],
             w: WriteToggle::FirstWrite,
             cycles: 0,
@@ -86,6 +89,10 @@ impl PPU {
         let result = self.status.read_u8();
         self.status.clear_v_blank();
         return result;
+    }
+
+    pub fn write_oam_address(&mut self, data: u8) {
+        self.oamaddr.write_u8(data);
     }
 
     pub fn write_mask(&mut self, data: u8) {
@@ -154,13 +161,14 @@ impl PPU {
     }
 
     pub fn tick(&mut self) {
-        // println!("Control {:08b}", self.control.read_u8());
+        // println!("Control {:08b}",. self.control.read_u8());
         // println!("cycle: {}, scanline: {}", self.cycles, self.scanline);
-        self.cycles += 1;
+        self.cycles += 1; // todo: move this at the end of the method
         match self.cycles {
             0 => (),
             1..=256 => {
                 if self.scanline < 240 {
+                    // todo: when cycle increment is moved, remove -1
                     self.render_pixel(self.cycles - 1, self.scanline);
                 }
             }
@@ -235,7 +243,7 @@ mod test_ppu {
         assert_eq!(0b0000_0000, ppu.mask.read_u8());
         assert_eq!(0b1010_0000, ppu.status.read_u8());
         assert_eq!(0b0000_0000, ppu.ppuscroll);
-        assert_eq!(0b0000_0000, ppu.oamaddr);
+        assert_eq!(0b0000_0000, ppu.oamaddr.read_u8());
         assert_eq!(0x0000, ppu.address.read_u16());
         assert_eq!(0b0000_0000, ppu.data.read_u8());
         assert_eq!([0; 2048], ppu.vram)

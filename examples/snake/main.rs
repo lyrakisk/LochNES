@@ -41,7 +41,11 @@ fn main() {
     let rom = Rom::try_from(&rom_bytes).unwrap();
     let ppu = Rc::new(RefCell::new(PPU::new(vec![])));
     let controller = Rc::new(RefCell::new(Controller::new()));
-    let cpu_mapper = Rc::new(RefCell::new(BasicMapper::new(rom.clone(), ppu.clone(), controller)));
+    let cpu_mapper = Rc::new(RefCell::new(BasicMapper::new(
+        rom.clone(),
+        ppu.clone(),
+        controller,
+    )));
     let mut cpu = CPU::new(cpu_mapper.clone());
 
     println!("rom len: {}", rom.prg_rom.len());
