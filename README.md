@@ -1,18 +1,6 @@
 # LochNES
 A (soon to be) fully-featured NES emulator written in Rust.   
-![image](https://github.com/user-attachments/assets/25162313-0c4f-4747-91c9-1eb85921c5c6)
-
-## Games Roadmap
-- [X] Snake (homebrew game, that only needs CPU)
-- [ ] Donkey Kong (official game, doesn't need scrolling)
-- [ ] Super Mario Bros (official game, needs most of the hardware's features) 
-
-## Technical Roadmap
-- [X] CPU
-  - no illegal opcodes yet
-- [ ] Memory Mappers
-- [ ] PPU
-- [ ] APU
+![image](https://github.com/user-attachments/assets/f9bc8688-1fcd-425c-a583-b189cc856515)
 
 
 # Resources
