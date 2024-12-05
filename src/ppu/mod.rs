@@ -139,6 +139,7 @@ impl PPU {
     }
 
     pub fn dma_write(&mut self, data: &[u8]) {
+        assert!(data.len() == 256);
         self.oam_ram.clone_from_slice(data);
     }
 
