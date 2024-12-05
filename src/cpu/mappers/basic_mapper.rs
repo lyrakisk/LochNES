@@ -117,7 +117,6 @@ impl Memory for BasicMapper {
                     .dma_write(&self.ram[address..address + 256]);
             }
             0x4016 => {
-                let high_order_byte = data;
                 self.controller.borrow_mut().write(data);
             }
             _ => println!(

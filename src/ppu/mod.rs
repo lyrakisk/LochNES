@@ -182,6 +182,11 @@ impl PPU {
                 self.cycles = self.cycles - 341;
                 self.scanline += 1;
 
+                // todo: Implement sprite rendering with proper timing
+                if self.scanline == 240 {
+                    self.render_sprites();
+                }
+
                 if self.scanline == 241 {
                     self.status.set_v_blank();
                     self.scanline += 1;
@@ -201,9 +206,9 @@ impl PPU {
     }
 
     fn render_pixel(&mut self, x: u16, y: u16) {
-        let bank = (self.control.background_pattern_table_address() as u16) * 1000;
+        let bank = (self.control.background_pattern_table_address() as u16) * 0x1000;
         // println!("bank: {}", bank);
-        assert!(bank == 0 || bank == 1000);
+        assert!(bank == 0 || bank == 0x1000);
         let nametable_x = x / 8;
         let nametable_y = y / 8;
         let nametable_base = self.control.nametable_base();
@@ -232,6 +237,61 @@ impl PPU {
         };
 
         self.frame.set_pixel(x as usize, y as usize, rgb);
+    }
+
+    fn render_sprites(&mut self) {
+        for i in (0..self.oam_ram.len()).step_by(4).rev() {
+            let tile_idx = self.oam_ram[i + 1] as u16;
+            let tile_x = self.oam_ram[i + 3] as usize;
+            let tile_y = self.oam_ram[i] as usize;
+
+            let flip_vertical = if self.oam_ram[i + 2] >> 7 & 1 == 1 {
+                true
+            } else {
+                false
+            };
+            let flip_horizontal = if self.oam_ram[i + 2] >> 6 & 1 == 1 {
+                true
+            } else {
+                false
+            };
+            let pallette_idx = self.oam_ram[i + 2] & 0b11;
+            let sprite_palette = self.sprite_palette(pallette_idx);
+
+            let bank: u16 = self.control.sprite_pattern_table_address();
+            assert!(bank == 0 || bank == 0x1000);
+            let tile =
+                &self.chr[(bank + tile_idx * 16) as usize..=(bank + tile_idx * 16 + 15) as usize];
+
+            for y in 0..=7 {
+                let mut upper = tile[y];
+                let mut lower = tile[y + 8];
+                'ololo: for x in (0..=7).rev() {
+                    let value = (1 & lower) << 1 | (1 & upper);
+                    upper = upper >> 1;
+                    lower = lower >> 1;
+                    let rgb = match value {
+                        0 => continue 'ololo, // skip coloring the pixel
+                        1 => SYSTEM_PALLETE[sprite_palette[1] as usize],
+                        2 => SYSTEM_PALLETE[sprite_palette[2] as usize],
+                        3 => SYSTEM_PALLETE[sprite_palette[3] as usize],
+                        _ => panic!("can't be"),
+                    };
+                    match (flip_horizontal, flip_vertical) {
+                        (false, false) => self.frame.set_pixel(tile_x + x, tile_y + y, rgb),
+                        (true, false) => self.frame.set_pixel(tile_x + 7 - x, tile_y + y, rgb),
+                        (false, true) => self.frame.set_pixel(tile_x + x, tile_y + 7 - y, rgb),
+                        (true, true) => self.frame.set_pixel(tile_x + 7 - x, tile_y + 7 - y, rgb),
+                    }
+                }
+            }
+        }
+    }
+
+    fn sprite_palette(&self, pallete_idx: u8) -> [u8; 4] {
+        let start = 0x11 + (pallete_idx * 4) as usize;
+        // todo: get correct colors from frame pallette
+        return [0, 0x20, 0x25, 0x35];
     }
 }
 

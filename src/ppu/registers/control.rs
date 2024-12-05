@@ -27,6 +27,15 @@ impl Control {
         }
     }
 
+    pub fn sprite_pattern_table_address(&self) -> u16 {
+        if (self.value & 0b0000_1000) >> 3 == 0 {
+            return 0;
+        } else {
+            return 0x1000;
+        }
+    }
+
+    // todo: multiply result by 1000 and remove this logic from ppu code
     pub fn background_pattern_table_address(&self) -> u8 {
         return self.value & 0b0001_0000 >> 4;
     }
