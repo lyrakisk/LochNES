@@ -102,13 +102,22 @@ impl Memory for BasicMapper {
                     _ => panic!("Impossible!"),
                 }
             }
-            0x4000..=0x4015 | 0x4017 => {
+            0x4000..=0x4013 | 0x4015 | 0x4017 => {
                 println!(
                     "Ignoring write to {:0x}, APU and IO are not implemented yet",
                     address
                 );
             }
+            0x4014 => {
+                let address = u16::from_be_bytes([data, 0x00]) as usize;
+                // possible timing issue. Normally, this would take 513-514 cycles,
+                // but here it will only require a few (depends on the executed instruction)
+                self.ppu
+                    .borrow_mut()
+                    .dma_write(&self.ram[address..address + 256]);
+            }
             0x4016 => {
+                let high_order_byte = data;
                 self.controller.borrow_mut().write(data);
             }
             _ => println!(

@@ -138,6 +138,10 @@ impl PPU {
         self.increment_address();
     }
 
+    pub fn dma_write(&mut self, data: &[u8]) {
+        self.oam_ram.clone_from_slice(data);
+    }
+
     fn mem_write_u8(&mut self, address: u16, data: u8) {
         match address {
             0x000..=0x1FFF => panic!("CHR Rom is read-only."),
