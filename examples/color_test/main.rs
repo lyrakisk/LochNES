@@ -56,10 +56,8 @@ fn main() {
     let mut total_cycles: usize = 0;
     loop {
         handle_user_input(controller.clone(), &mut event_pump);
-        // cpu_mapper.borrow_mut().write_u8(0xfe, rng.gen_range(1, 16));
 
         if total_cycles % 341 == 0 {
-            // println!("cpu total: {}, ppu: {}, scanline: {}",total_cycles, ppu.borrow().cycles, ppu.borrow().scanline);
             texture
                 .update(None, &ppu.borrow().frame.bytes, 256 * 3)
                 .unwrap();
@@ -67,8 +65,6 @@ fn main() {
             canvas.present();
         }
 
-        // ::std::thread::sleep(std::time::Duration::new(0, 20_000));
-        // need to implement joypads
         let instruction_result = cpu.execute_next_instruction();
 
         for _ in 0..instruction_result.executed_cycles {
