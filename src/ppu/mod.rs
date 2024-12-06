@@ -168,12 +168,10 @@ impl PPU {
     pub fn tick(&mut self) {
         // println!("Control {:08b}",. self.control.read_u8());
         // println!("cycle: {}, scanline: {}", self.cycles, self.scanline);
-        self.cycles += 1; // todo: move this at the end of the method
         match self.cycles {
             0 => (),
             1..=256 => {
                 if self.scanline < 240 {
-                    // todo: when cycle increment is moved, remove -1
                     self.render_pixel(self.cycles - 1, self.scanline);
                 }
             }
@@ -203,6 +201,7 @@ impl PPU {
                 }
             }
         }
+        self.cycles += 1;
     }
 
     fn render_pixel(&mut self, x: u16, y: u16) {
