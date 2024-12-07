@@ -52,7 +52,6 @@ pub struct PPU {
 
 impl PPU {
     pub fn new(chr: Vec<u8>) -> Self {
-        println!("Creating PPU from CHR:\n{:?}", chr);
         PPU {
             control: Control::new(0b0000_0000),
             mask: Mask::new(0b0000_0000),
@@ -75,7 +74,6 @@ impl PPU {
     }
 
     pub fn write_control(&mut self, data: u8) {
-        println!("Write to control register: {:0b}", data);
         let current_nmi_enable = self.control.nmi_enable();
         self.control.write_u8(data);
         let next_nmi_enable = self.control.nmi_enable();
