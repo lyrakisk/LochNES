@@ -14,19 +14,22 @@ use registers::status::Status;
 
 use registers::oam_address::OAMAddress;
 #[rustfmt::skip]
-pub static SYSTEM_PALLETE: [(u8,u8,u8); 64] = [
-   (0x80, 0x80, 0x80), (0x00, 0x3D, 0xA6), (0x00, 0x12, 0xB0), (0x44, 0x00, 0x96), (0xA1, 0x00, 0x5E),
-   (0xC7, 0x00, 0x28), (0xBA, 0x06, 0x00), (0x8C, 0x17, 0x00), (0x5C, 0x2F, 0x00), (0x10, 0x45, 0x00),
-   (0x05, 0x4A, 0x00), (0x00, 0x47, 0x2E), (0x00, 0x41, 0x66), (0x00, 0x00, 0x00), (0x05, 0x05, 0x05),
-   (0x05, 0x05, 0x05), (0xC7, 0xC7, 0xC7), (0x00, 0x77, 0xFF), (0x21, 0x55, 0xFF), (0x82, 0x37, 0xFA),
-   (0xEB, 0x2F, 0xB5), (0xFF, 0x29, 0x50), (0xFF, 0x22, 0x00), (0xD6, 0x32, 0x00), (0xC4, 0x62, 0x00),
-   (0x35, 0x80, 0x00), (0x05, 0x8F, 0x00), (0x00, 0x8A, 0x55), (0x00, 0x99, 0xCC), (0x21, 0x21, 0x21),
-   (0x09, 0x09, 0x09), (0x09, 0x09, 0x09), (0xFF, 0xFF, 0xFF), (0x0F, 0xD7, 0xFF), (0x69, 0xA2, 0xFF),
-   (0xD4, 0x80, 0xFF), (0xFF, 0x45, 0xF3), (0xFF, 0x61, 0x8B), (0xFF, 0x88, 0x33), (0xFF, 0x9C, 0x12),
-   (0xFA, 0xBC, 0x20), (0x9F, 0xE3, 0x0E), (0x2B, 0xF0, 0x35), (0x0C, 0xF0, 0xA4), (0x05, 0xFB, 0xFF),
-   (0x5E, 0x5E, 0x5E), (0x0D, 0x0D, 0x0D), (0x0D, 0x0D, 0x0D), (0xFF, 0xFF, 0xFF), (0xA6, 0xFC, 0xFF),
-   (0xB3, 0xEC, 0xFF), (0xDA, 0xAB, 0xEB), (0xFF, 0xA8, 0xF9), (0xFF, 0xAB, 0xB3), (0xFF, 0xD2, 0xB0),
-   (0xFF, 0xEF, 0xA6), (0xFF, 0xF7, 0x9C), (0xD7, 0xE8, 0x95), (0xA6, 0xED, 0xAF), (0xA2, 0xF2, 0xDA),
+pub static SYSTEM_PALETTE: [(u8,u8,u8); 64] = [
+   (0x80, 0x80, 0x80), (0x00, 0x3D, 0xA6), (0x00, 0x12, 0xB0), (0x44, 0x00, 0x96), 
+   (0xA1, 0x00, 0x5E), (0xC7, 0x00, 0x28), (0xBA, 0x06, 0x00), (0x8C, 0x17, 0x00),
+   (0x5C, 0x2F, 0x00), (0x10, 0x45, 0x00), (0x05, 0x4A, 0x00), (0x00, 0x47, 0x2E),
+   (0x00, 0x41, 0x66), (0x00, 0x00, 0x00), (0x05, 0x05, 0x05), (0x05, 0x05, 0x05),
+   (0xC7, 0xC7, 0xC7), (0x00, 0x77, 0xFF), (0x21, 0x55, 0xFF), (0x82, 0x37, 0xFA),
+   (0xEB, 0x2F, 0xB5), (0xFF, 0x29, 0x50), (0xFF, 0x22, 0x00), (0xD6, 0x32, 0x00),
+   (0xC4, 0x62, 0x00), (0x35, 0x80, 0x00), (0x05, 0x8F, 0x00), (0x00, 0x8A, 0x55),
+   (0x00, 0x99, 0xCC), (0x21, 0x21, 0x21), (0x09, 0x09, 0x09), (0x09, 0x09, 0x09),
+   (0xFF, 0xFF, 0xFF), (0x0F, 0xD7, 0xFF), (0x69, 0xA2, 0xFF), (0xD4, 0x80, 0xFF),
+   (0xFF, 0x45, 0xF3), (0xFF, 0x61, 0x8B), (0xFF, 0x88, 0x33), (0xFF, 0x9C, 0x12),
+   (0xFA, 0xBC, 0x20), (0x9F, 0xE3, 0x0E), (0x2B, 0xF0, 0x35), (0x0C, 0xF0, 0xA4),
+   (0x05, 0xFB, 0xFF), (0x5E, 0x5E, 0x5E), (0x0D, 0x0D, 0x0D), (0x0D, 0x0D, 0x0D),
+   (0xFF, 0xFF, 0xFF), (0xA6, 0xFC, 0xFF), (0xB3, 0xEC, 0xFF), (0xDA, 0xAB, 0xEB),
+   (0xFF, 0xA8, 0xF9), (0xFF, 0xAB, 0xB3), (0xFF, 0xD2, 0xB0), (0xFF, 0xEF, 0xA6),
+   (0xFF, 0xF7, 0x9C), (0xD7, 0xE8, 0x95), (0xA6, 0xED, 0xAF), (0xA2, 0xF2, 0xDA),
    (0x99, 0xFF, 0xFC), (0xDD, 0xDD, 0xDD), (0x11, 0x11, 0x11), (0x11, 0x11, 0x11)
 ];
 
@@ -42,7 +45,7 @@ pub struct PPU {
     pub frame: Frame,
     pub vram: [u8; 2048],
     oam_ram: [u8; 256],
-    pallete_ram: [u8; 32],
+    palette_ram: [u8; 32],
     w: WriteToggle,
     pub cycles: u16,
     pub scanline: u16,
@@ -64,7 +67,7 @@ impl PPU {
             frame: Frame::new(),
             vram: [0; 2048],
             oam_ram: [0; 256],
-            pallete_ram: [0; 32],
+            palette_ram: [0; 32],
             w: WriteToggle::FirstWrite,
             cycles: 0,
             scanline: 0,
@@ -124,8 +127,8 @@ impl PPU {
             // todo: get nametable mirroring from cartrige, for now we assume it's vertical
             0x2000..=0x2FFF => self.vram[(address & 0b10011111111111 - 0x2000) as usize],
             0x3000..=0x3EFF => panic!("Can't access address {}", address),
-            0x3F00..=0x3F1F => self.pallete_ram[(address - 0x3f00) as usize],
-            0x3F20..=0x3FFF => todo!("Mirroring not implemented!"),
+            0x3F00..=0x3F1F => self.palette_ram[(address - 0x3f00) as usize],
+            0x3F20..=0x3FFF => panic!("Unexpected palette ram mirror access!"),
             _ => panic!("Address {} is out of bounds", address),
         }
     }
@@ -147,10 +150,8 @@ impl PPU {
             // todo: get nametable mirroring from cartrige, for now we assume it's vertical
             0x2000..=0x2FFF => self.vram[(address & 0b10011111111111 - 0x2000) as usize] = data,
             0x3000..=0x3EFF => panic!("Can't access address {}", address),
-            0x3F00..=0x3F1F => self.pallete_ram[(address - 0x3f00) as usize] = data,
-            0x3F20..=0x3FFF => {
-                self.pallete_ram[((address & 0b11111100011111) - 0x3f00) as usize] = data
-            }
+            0x3F00..=0x3F1F => self.palette_ram[(address - 0x3f00) as usize] = data,
+            0x3F20..=0x3FFF => panic!("Unexpected palette ram mirror access!"),
             _ => panic!("Address {} is out of bounds", address),
         }
     }
@@ -214,26 +215,50 @@ impl PPU {
         let nametable_byte = self.mem_read_u8(nametable_index) as u16;
         // println!("Render pixel (x: {}, y: {}, bank: {}, n_x: {}, n_y: {}, n_base: {:0x}, n_index: {:0x},  n_byte: {})", x, y, bank, nametable_x, nametable_y, nametable_base, nametable_index, nametable_byte);
 
-        let tile = &self.chr
+        let tile: &[u8] = &self.chr
             [(bank + nametable_byte * 16) as usize..=(bank + nametable_byte * 16 + 15) as usize];
+
         let shift = vec![7, 6, 5, 4, 3, 2, 1, 0];
 
-        let mut upper = tile[(y % 8) as usize];
-        let mut lower = tile[((y % 8) + 8) as usize];
+        let upper = tile[(y % 8) as usize] >> (shift[(x % 8) as usize]);
+        let lower = tile[((y % 8) + 8) as usize] >> (shift[(x % 8) as usize]);
 
-        upper = upper >> (shift[(x % 8) as usize]);
-        lower = lower >> (shift[(x % 8) as usize]);
-
-        let value = (1 & upper) << 1 | (1 & lower);
-        let rgb = match value {
-            0 => SYSTEM_PALLETE[0x01],
-            1 => SYSTEM_PALLETE[0x23],
-            2 => SYSTEM_PALLETE[0x27],
-            3 => SYSTEM_PALLETE[0x30],
-            _ => panic!("can't be"),
-        };
+        let palette_index = (1 & upper) << 1 | (1 & lower);
+        let background_palette = self.background_palette(x, y);
+        let rgb = SYSTEM_PALETTE[background_palette[palette_index as usize] as usize];
 
         self.frame.set_pixel(x as usize, y as usize, rgb);
+    }
+
+    fn background_palette(&self, x: u16, y: u16) -> [u8; 4] {
+        let nametable_base = self.control.nametable_base();
+        let block_x = x / 32;
+        let block_y = y / 30;
+        assert!(block_x < 8);
+        assert!(block_y < 8);
+        let attribute_table_index = block_y * 8 + block_x;
+        assert!(attribute_table_index < 64);
+        let ram_addr = nametable_base + 0x3C0 + attribute_table_index;
+
+        let attribute_table_byte: u8 = self.mem_read_u8(ram_addr);
+        let quadrant = ((x % 4) / 16, (y % 4) / 16); // had 32 instead of 4, why need 4 here?
+
+        let palette_base = match quadrant {
+            (0, 0) => attribute_table_byte & 0b0000_0011,
+            (0, 1) => (attribute_table_byte & 0b0000_1100) >> 2,
+            (1, 0) => (attribute_table_byte & 0b0011_0000) >> 4,
+            (1, 1) => (attribute_table_byte & 0b1100_0000) >> 6,
+            _ => panic!("Impossible!"),
+        };
+
+        let pallete_start = 1 + (palette_base as usize) * 4;
+
+        return [
+            self.palette_ram[0], // why?
+            self.palette_ram[(pallete_start + 1) as usize],
+            self.palette_ram[(pallete_start + 2) as usize],
+            self.palette_ram[(pallete_start + 3) as usize],
+        ];
     }
 
     fn render_sprites(&mut self) {
@@ -252,8 +277,8 @@ impl PPU {
             } else {
                 false
             };
-            let pallette_idx = self.oam_ram[i + 2] & 0b11;
-            let sprite_palette = self.sprite_palette(pallette_idx);
+            let palette_ram_index = self.oam_ram[i + 2] & 0b11;
+            let sprite_palette = self.sprite_palette(palette_ram_index);
 
             let bank: u16 = self.control.sprite_pattern_table_address();
             assert!(bank == 0 || bank == 0x1000);
@@ -269,9 +294,9 @@ impl PPU {
                     lower = lower >> 1;
                     let rgb = match value {
                         0 => continue 'ololo, // skip coloring the pixel
-                        1 => SYSTEM_PALLETE[sprite_palette[1] as usize],
-                        2 => SYSTEM_PALLETE[sprite_palette[2] as usize],
-                        3 => SYSTEM_PALLETE[sprite_palette[3] as usize],
+                        1 => SYSTEM_PALETTE[sprite_palette[1] as usize],
+                        2 => SYSTEM_PALETTE[sprite_palette[2] as usize],
+                        3 => SYSTEM_PALETTE[sprite_palette[3] as usize],
                         _ => panic!("can't be"),
                     };
                     match (flip_horizontal, flip_vertical) {
@@ -285,10 +310,14 @@ impl PPU {
         }
     }
 
-    fn sprite_palette(&self, pallete_idx: u8) -> [u8; 4] {
-        let start = 0x11 + (pallete_idx * 4) as usize;
-        // todo: get correct colors from frame pallette
-        return [0, 0x20, 0x25, 0x35];
+    fn sprite_palette(&self, palette_ram_index: u8) -> [u8; 4] {
+        let start = 0x11 + (palette_ram_index * 4) as usize;
+        return [
+            0,
+            self.palette_ram[start],
+            self.palette_ram[start + 1],
+            self.palette_ram[start + 2],
+        ];
     }
 }
 
