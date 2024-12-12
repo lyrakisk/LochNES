@@ -127,8 +127,10 @@ impl PPU {
             // todo: get nametable mirroring from cartrige, for now we assume it's vertical
             0x2000..=0x2FFF => self.vram[(address & 0b10011111111111 - 0x2000) as usize],
             0x3000..=0x3EFF => panic!("Can't access address {}", address),
-            0x3F00..=0x3F1F => self.palette_ram[(address - 0x3f00) as usize],
-            0x3F20..=0x3FFF => panic!("Unexpected palette ram mirror access!"),
+            0x3F00..=0x3FFF => {
+                let mirror_down_address = address & 0b11111100011111;
+                self.palette_ram[(mirror_down_address - 0x3f00) as usize]
+            }
             _ => panic!("Address {} is out of bounds", address),
         }
     }
@@ -150,8 +152,10 @@ impl PPU {
             // todo: get nametable mirroring from cartrige, for now we assume it's vertical
             0x2000..=0x2FFF => self.vram[(address & 0b10011111111111 - 0x2000) as usize] = data,
             0x3000..=0x3EFF => panic!("Can't access address {}", address),
-            0x3F00..=0x3F1F => self.palette_ram[(address - 0x3f00) as usize] = data,
-            0x3F20..=0x3FFF => panic!("Unexpected palette ram mirror access!"),
+            0x3F00..=0x3FFF => {
+                let mirror_down_address = address & 0b11111100011111;
+                self.palette_ram[(mirror_down_address - 0x3f00) as usize] = data;
+            }
             _ => panic!("Address {} is out of bounds", address),
         }
     }
