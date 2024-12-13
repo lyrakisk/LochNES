@@ -1,6 +1,6 @@
 # LochNES
 A (soon to be) fully-featured NES emulator written in Rust.   
-![image](https://github.com/user-attachments/assets/f9bc8688-1fcd-425c-a583-b189cc856515)
+![image](https://github.com/user-attachments/assets/bb47153a-433a-4c9e-97e1-85bfd7fa192d)
 
 
 # Resources
