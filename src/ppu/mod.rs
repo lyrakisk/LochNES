@@ -235,30 +235,32 @@ impl PPU {
     }
 
     fn background_palette(&self, x: u16, y: u16) -> [u8; 4] {
+        const ATTRIBUTE_TABLE_OFFSET: u16 = 0x3C0;
         let nametable_base = self.control.nametable_base();
         let block_x = x / 32;
-        let block_y = y / 30;
+        let block_y = y / 32;
         assert!(block_x < 8);
         assert!(block_y < 8);
         let attribute_table_index = block_y * 8 + block_x;
         assert!(attribute_table_index < 64);
-        let ram_addr = nametable_base + 0x3C0 + attribute_table_index;
+        let ram_addr = nametable_base + ATTRIBUTE_TABLE_OFFSET + attribute_table_index;
 
         let attribute_table_byte: u8 = self.mem_read_u8(ram_addr);
-        let quadrant = ((x % 4) / 16, (y % 4) / 16); // had 32 instead of 4, why need 4 here?
+
+        let quadrant: (u16, u16) = ((x % 32) / 16, (y % 32) / 16);
 
         let palette_base = match quadrant {
-            (0, 0) => attribute_table_byte & 0b0000_0011,
-            (0, 1) => (attribute_table_byte & 0b0000_1100) >> 2,
-            (1, 0) => (attribute_table_byte & 0b0011_0000) >> 4,
-            (1, 1) => (attribute_table_byte & 0b1100_0000) >> 6,
+            (0, 0) => attribute_table_byte & 0b11,
+            (1, 0) => attribute_table_byte >> 2 & 0b11,
+            (0, 1) => attribute_table_byte >> 4 & 0b11,
+            (1, 1) => attribute_table_byte >> 6 & 0b11,
             _ => panic!("Impossible!"),
         };
 
-        let pallete_start = 1 + (palette_base as usize) * 4;
+        let pallete_start = 3 + (palette_base as usize) * 4;
 
         return [
-            self.palette_ram[0], // why?
+            self.palette_ram[0], // why? - Every palette's zero color is the default background color
             self.palette_ram[(pallete_start + 1) as usize],
             self.palette_ram[(pallete_start + 2) as usize],
             self.palette_ram[(pallete_start + 3) as usize],
