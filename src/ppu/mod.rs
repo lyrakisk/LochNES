@@ -217,7 +217,6 @@ impl PPU {
         let nametable_index = nametable_base + nametable_x + nametable_y * 32;
         assert!(nametable_index - nametable_base < 0x400);
         let nametable_byte = self.mem_read_u8(nametable_index) as u16;
-        // println!("Render pixel (x: {}, y: {}, bank: {}, n_x: {}, n_y: {}, n_base: {:0x}, n_index: {:0x},  n_byte: {})", x, y, bank, nametable_x, nametable_y, nametable_base, nametable_index, nametable_byte);
 
         let tile: &[u8] = &self.chr
             [(bank + nametable_byte * 16) as usize..=(bank + nametable_byte * 16 + 15) as usize];
@@ -227,7 +226,7 @@ impl PPU {
         let upper = tile[(y % 8) as usize] >> (shift[(x % 8) as usize]);
         let lower = tile[((y % 8) + 8) as usize] >> (shift[(x % 8) as usize]);
 
-        let palette_index = (1 & upper) << 1 | (1 & lower);
+        let palette_index = (1 & lower) << 1 | (1 & upper);
         let background_palette = self.background_palette(x, y);
         let rgb = SYSTEM_PALETTE[background_palette[palette_index as usize] as usize];
 
@@ -257,14 +256,16 @@ impl PPU {
             _ => panic!("Impossible!"),
         };
 
-        let pallete_start = 3 + (palette_base as usize) * 4;
+        let palette_start = (palette_base as usize) * 4;
 
-        return [
-            self.palette_ram[0], // why? - Every palette's zero color is the default background color
-            self.palette_ram[(pallete_start + 1) as usize],
-            self.palette_ram[(pallete_start + 2) as usize],
-            self.palette_ram[(pallete_start + 3) as usize],
+        let result = [
+            self.palette_ram[palette_start],
+            self.palette_ram[(palette_start + 1) as usize],
+            self.palette_ram[(palette_start + 2) as usize],
+            self.palette_ram[(palette_start + 3) as usize],
         ];
+
+        return result;
     }
 
     fn render_sprites(&mut self) {
