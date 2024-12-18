@@ -1,13 +1,11 @@
 use vines::controller::Controller;
 use vines::cpu::mappers::basic_mapper::*;
 use vines::cpu::*;
-use vines::memory::Memory;
 use vines::ppu::PPU;
 use vines::rom::*;
 
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
-use sdl2::pixels::Color;
 use sdl2::pixels::PixelFormatEnum;
 use sdl2::EventPump;
 
