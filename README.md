@@ -2,6 +2,10 @@
 A (soon to be) fully-featured NES emulator written in Rust.   
 ![image](https://github.com/user-attachments/assets/bb47153a-433a-4c9e-97e1-85bfd7fa192d)
 
+# How to run
+- Install Rust
+- Install the SDL2 library
+- Try out one of the examples by running `cargo run --release --example [example_name]`. For the pacman example, you will need to legally own the game's ROM dump. 
 
 # Resources
 ## General
