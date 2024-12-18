@@ -9,9 +9,7 @@ env:
 
 jobs:
   Test:
-
     runs-on: ubuntu-latest
-
     steps:
     - name: Checkout repo & submodules
       uses: actions/checkout@v3
