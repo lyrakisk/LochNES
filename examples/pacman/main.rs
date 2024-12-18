@@ -1,7 +1,7 @@
-use LochNES::cpu::mappers::basic_mapper::*;
-use LochNES::ppu::PPU;
-use LochNES::rom::*;
-use LochNES::{controller::*, cpu::*};
+use vines::cpu::mappers::basic_mapper::*;
+use vines::ppu::PPU;
+use vines::rom::*;
+use vines::{controller::*, cpu::*};
 
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
@@ -52,7 +52,7 @@ fn main() {
     loop {
         handle_user_input(controller.clone(), &mut event_pump);
 
-        if total_cycles % 34100 == 0 {
+        if total_cycles % 6820 == 0 {
             texture
                 .update(None, &ppu.borrow().frame.bytes, 256 * 3)
                 .unwrap();
