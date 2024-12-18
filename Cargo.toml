@@ -2,8 +2,9 @@
 name = "vines"
 version = "0.0.1"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+license-file = "LICENSE"
+description = "NES emulator library"
+repository = "https://github.com/lyrakisk/vines"
 
 [dependencies]
 bitflags = "2.6.0"
