@@ -14,7 +14,7 @@ use std::fs::read;
 use std::path::PathBuf;
 use std::rc::Rc;
 fn main() {
-    env::set_var("RUST_BACKTRACE", "1");
+    env::set_var("RUST_BACKTRACE", "full");
     let sdl_context = sdl2::init().unwrap();
     let video_subsystem = sdl_context.video().unwrap();
     let window = video_subsystem
